@@ -1,15 +1,12 @@
 {
-  "name": "eftec/composerone",
-  "description": "todo",
+  "name": "eftec/arrayone",
+  "description": "It is a minimalist library that process arrays in PHP.",
   "type": "library",
   "keywords": [
-    "redis",
     "php",
-    "cache",
-    "file system",
-    "pdo"
+    "array"
   ],
-  "homepage": "https://github.com/EFTEC/ComposerOne",
+  "homepage": "https://github.com/EFTEC/ArrayOne",
   "authors": [
     {
       "name": "Jorge Castro Castillo",

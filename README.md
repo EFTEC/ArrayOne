@@ -1,7 +1,8 @@
 # ArrayOne
-It is a minimalist class that process arrays in PHP.
+It is a minimalist library that process arrays in PHP.
 
 This library is focused to work with business data(reading/saving files, database records, API, etc.), so it is not similar to Numpy, Pandas, NumPHP or alike because they target difference objectives. It is more closely similar to Microsoft PowerQuery.
+What it does? Filter, order, renaming column, grouping, validating, amongst many other operations.
 
 
 - [x] it works with PHP arrays. PHP arrays allows hierarchy structures using indexed and/or associative values.
