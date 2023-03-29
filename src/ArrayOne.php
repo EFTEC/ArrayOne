@@ -7,12 +7,12 @@ use RuntimeException;
 
 /**
  * Class ArrayOne
- * @see https://github.com/EFTEC/ArrayOne
+ * @see       https://github.com/EFTEC/ArrayOne
  * @copyright Jorge Castro Castillo, dual license, see README.md for licensing.
  */
 class ArrayOne
 {
-    public const VERSION="1.0";
+    public const VERSION = "1.1";
     /** @var array|null */
     protected $array;
     protected $serviceObject;
@@ -36,7 +36,8 @@ class ArrayOne
      * It gets the current version of the library
      * @return string
      */
-    public function getVersion():string {
+    public function getVersion(): string
+    {
         return self::VERSION;
     }
 
@@ -45,6 +46,8 @@ class ArrayOne
      * <b>Example:</b><br>
      * <pre>
      * ArrayOne::set($array)->all();
+     * ArrayOne::set($array,$object)->all(); // the object is used by validate()
+     * ArrayOne::set($array,SomeClass:class)->all(); // the object is used by validate()
      * </pre>
      * @param array|null         $array
      * @param object|null|string $service the service instance. You can use the class or an object.
@@ -53,12 +56,80 @@ class ArrayOne
     public static function set(?array $array, $service = null): ArrayOne
     {
         $instance = new ArrayOne($array);
-        if(is_string($service)) {
-            $instance->serviceObject=new $service();
+        if (is_string($service)) {
+            $instance->serviceObject = new $service();
         } else {
             $instance->serviceObject = $service;
         }
         return $instance;
+    }
+
+    /**
+     * It sets the array using a json.
+     * <b>Example:</b><br>
+     * <pre>
+     * ArrayOne::setJson('{"a":3,"b":[1,2,3]}')->all();
+     * </pre>
+     * @param string $json
+     * @return ArrayOne
+     */
+    public static function setJson(string $json): ArrayOne
+    {
+        $json = json_decode($json, true);
+        return self::set($json);
+    }
+
+    /**
+     * It sets the array using a csv. This csv must have a header.<br>
+     * <b>Example:</b><br>
+     * <pre>
+     * ArrayOne::setCsv("a,b,c\n1,2,3\n4,5,6")->all();
+     * </pre>
+     * @param string $string    the string to parse
+     * @param string $separator default ",". Set the field delimiter (one character only).
+     * @param string $enclosure default '"'. Set the field enclosure character (one character only).
+     * @param string $escape    default "\\". Set the escape character (one character only).
+     * @return ArrayOne
+     */
+    public static function setCsv(string $string, string $separator = ",", string $enclosure = '"', string $escape = "\\"): ArrayOne
+    {
+        $csv = [];
+        $string = str_replace("\r\n", "\n", $string);
+        $lines = explode("\n", $string);
+        $header = str_getcsv($lines[0], $separator, $enclosure, $escape); // get header
+        array_shift($lines); // remove column header
+        foreach ($lines as $line) {
+            $csv[] = array_combine($header, str_getcsv($line, $separator, $enclosure, $escape));
+        }
+        return self::set($csv);
+    }
+
+    /**
+     * It sets the array using a head-less csv.<br>
+     * <b>Example:</b><br>
+     * <pre>
+     * ArrayOne::setCsvHeadLess("1,2,3\n4,5,6")->all();
+     * ArrayOne::setCsvHeadLess("1,2,3\n4,5,6",['c1','c2','c3'])->all();
+     * </pre>
+     * @param string     $string    the string to parse
+     * @param array|null $header    If the header is null, then it creates an indexed array.<br>
+     *                              if the header is an array, then it is used as header
+     * @param string     $separator default ",". Set the field delimiter (one character only).
+     * @param string     $enclosure default '"'. Set the field enclosure character (one character only).
+     * @param string     $escape    default "\\". Set the escape character (one character only).
+     * @return ArrayOne
+     */
+    public static function setCsvHeadLess(string $string, ?array $header = null, string $separator = ",", string $enclosure = '"', string $escape = "\\"): ArrayOne
+    {
+        $csv = [];
+        $string = str_replace("\r\n", "\n", $string);
+        $lines = explode("\n", $string);
+        foreach ($lines as $line) {
+            if ($header !== null) {
+                $csv[] = array_combine($header, str_getcsv($line, $separator, $enclosure, $escape));
+            }
+        }
+        return self::set($csv);
     }
 
     /**
@@ -269,20 +340,30 @@ class ArrayOne
      * <pre>
      * $array = [['id' => 1, 'name' => 'chile'], ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']];
      * // ['id' => 2, 'name' => 'argentina']
-     * $r = ArrayOne::set($array)->filter(function($id, $row) {return $row['id'] === 2;}, true)->result();
+     * $r = ArrayOne::set($array)->filter(function($row, $id) {return $row['id'] === 2;}, true)->result();
      * // [1=>['id' => 2, 'name' => 'argentina']]
-     * $r = ArrayOne::set($array)->filter(function($id, $row) {return $row['id'] === 2;}, false)->result();
+     * $r = ArrayOne::set($array)->filter(function($row, $id) {return $row['id'] === 2;}, false)->result();
      * </pre>
-     * @param callable|null $condition
-     * @param bool          $flat
+     * @param callable|null|array $condition you can use a callable function ($row,$id)<br>
+     *                                       or a comparison array ['id'=>'eq;2']
+     * @param bool                $flat
      * @return $this
+     * @see ArrayOne::validate to see the definition of comparison array
      */
-    public function filter(?callable $condition, bool $flat = false): ArrayOne
+    public function filter($condition, bool $flat = false): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
         }
-        $this->currentArray = array_filter($this->currentArray, $condition, ARRAY_FILTER_USE_BOTH);
+        if ($condition instanceof Closure) {
+            $this->currentArray = array_filter($this->currentArray, $condition, ARRAY_FILTER_USE_BOTH);
+        } else {
+            $this->currentArray = array_filter($this->currentArray,
+                function($row, $index) use ($condition) {
+                    return $this->filterCondition($row, $index, $condition);
+                },
+                ARRAY_FILTER_USE_BOTH);
+        }
         if ($flat && count($this->currentArray) === 1) {
             $this->currentArray = reset($this->currentArray);
         }
@@ -291,11 +372,46 @@ class ArrayOne
     }
 
     /**
+     * @param mixed $row
+     * @param mixed $index
+     * @param array $condition
+     * @return bool
+     * @noinspection PhpUnusedParameterInspection
+     */
+    protected function filterCondition($row, $index, array $condition): bool
+    {
+        if (!is_array($row)) {
+            $row = [$row];
+        }
+        $fail = false;
+        foreach ($row as $k => $r) {
+            if (isset($condition[$k])) {
+                $vparts = explode('|', $condition[$k]);
+                foreach ($vparts as $vpart) {
+                    $fragment = explode(';', $vpart, 3);
+                    $type = $fragment[0];
+                    $compValue = $fragment[1] ?? null;
+                    if (strpos($compValue, ',') !== false) {
+                        $compValue = explode(',', $compValue);
+                    }
+                    $msg = '';
+                    $this->runCondition($r,$compValue,$type,$fail,$msg);
+                    if($fail) {
+                        break 2;
+                    }
+                }
+            }
+        }
+        return !$fail;
+    }
+
+    /**
      * It calls a function for every element of an array
      * @param callable|null $condition The function to call.
      * @return $this
      */
-    public function map(?callable $condition): ArrayOne
+    public
+    function map(?callable $condition): ArrayOne
     {
         $this->setCurrentArray(array_map($condition, $this->currentArray));
         return $this;
@@ -309,7 +425,8 @@ class ArrayOne
      * </pre>
      * @return $this
      */
-    public function flat(): ArrayOne
+    public
+    function flat(): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -323,18 +440,20 @@ class ArrayOne
     }
 
     /** @noinspection TypeUnsafeArraySearchInspection */
-    private function runCondition($r, $compareValue, $compareType, bool &$fail, ?string &$genMsg): void
+    private
+    function runCondition($r, $compareValue, $compareType, bool &$fail, ?string &$genMsg): void
     {
         if (strpos($compareType, 'f:') === 0) {
-            if($this->serviceObject===null) {
+            if ($this->serviceObject === null) {
                 throw new RuntimeException('validate: no service class');
             }
-            $namefunction=substr($compareType,2); // remove the 'f:'
-            $fail=!$this->serviceObject->$namefunction($r,$compareValue,$genMsg);
+            $namefunction = substr($compareType, 2); // remove the 'f:'
+            $fail = !$this->serviceObject->$namefunction($r, $compareValue, $genMsg);
             return;
         }
         switch ($compareType) {
             case 'contain':
+            case 'like':
                 if (strpos((string)$r, $compareValue) === false) {
                     $fail = true;
                     $genMsg = '%field contains %comp';
@@ -565,28 +684,29 @@ class ArrayOne
                 }
                 break;
             case 'in':
-                if(!is_array($compareValue)) {
+                if (!is_array($compareValue)) {
                     $fail = true;
                     $genMsg = '%field has no values to compare';
                 }
-                if (!in_array($r,$compareValue)) {
+                if (!in_array($r, $compareValue)) {
                     $fail = true;
                     $genMsg = '%field is not in list';
                 }
                 break;
             case 'notin':
-                if(!is_array($compareValue)) {
+                if (!is_array($compareValue)) {
                     $fail = true;
                     $genMsg = '%field has no values to compare';
                 }
-                if (in_array($r,$compareValue)) {
+                if (in_array($r, $compareValue)) {
                     $fail = true;
                     $genMsg = '%field should not be in list';
                 }
                 break;
             default:
-                $fail=true;
-                $genMsg="Unknown comparison [$compareType]";
+                throw new RuntimeException("ArrayOne comparison [$compareType] does not exist");
+                //$fail = true;
+                //$genMsg = "Unknown comparison [$compareType]";
         }
     }
 
@@ -594,7 +714,8 @@ class ArrayOne
      * It returns the first element of an array.
      * @return $this
      */
-    public function first(): ArrayOne
+    public
+    function first(): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -607,7 +728,8 @@ class ArrayOne
      * It returns the last element of an array.
      * @return $this
      */
-    public function last(): ArrayOne
+    public
+    function last(): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -621,7 +743,8 @@ class ArrayOne
      * @param $index
      * @return $this
      */
-    public function nPos($index): ArrayOne
+    public
+    function nPos($index): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -639,7 +762,8 @@ class ArrayOne
      * @param bool  $overwrite
      * @return void
      */
-    protected function setCurrentArray($values, bool $overwrite = true): void
+    protected
+    function setCurrentArray($values, bool $overwrite = true): void
     {
         if ($overwrite) {
             $this->currentArray = $values;
@@ -683,7 +807,8 @@ class ArrayOne
      *                                            is the accumulator value
      * @return $this
      */
-    public function reduce($functionAggregation): ArrayOne
+    public
+    function reduce($functionAggregation): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -752,7 +877,8 @@ class ArrayOne
      * @param mixed $newColumn the name of the new column
      * @return $this
      */
-    public function indexToColumn($newColumn): ArrayOne
+    public
+    function indexToColumn($newColumn): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -774,7 +900,8 @@ class ArrayOne
      * @param mixed $oldColumn the old column. This column will be converted into an index
      * @return $this
      */
-    public function columnToIndex($oldColumn): ArrayOne
+    public
+    function columnToIndex($oldColumn): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -807,7 +934,8 @@ class ArrayOne
      *
      * @return $this
      */
-    public function group($column, array $functionAggregation): ArrayOne
+    public
+    function group($column, array $functionAggregation): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -871,7 +999,8 @@ class ArrayOne
      * @param string $direction =['asc','desc'][$i]  ascending or descending.
      * @return $this
      */
-    public function sort($column, string $direction = 'asc'): ArrayOne
+    public
+    function sort($column, string $direction = 'asc'): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -902,12 +1031,159 @@ class ArrayOne
      * @param mixed $colName
      * @return $this
      */
-    public function removeDuplicate($colName): ArrayOne
+    public
+    function removeDuplicate($colName): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
         }
         return $this;
+    }
+
+    /**
+     * It removes the row with the id $rowId. If the row does not exist, then it does nothing
+     * <b>Example:</b><br>
+     * <pre>
+     * $this->removeRow(20);
+     * </pre>
+     * @param mixed $rowId    The id of the row to delete
+     * @param bool  $renumber if true then it renumber the list<br>
+     *                        ex: if 1 is deleted then $renumber=true: [0=>0,1=>1,2=>2] =>  [0=>0,1=>2]<br>
+     *                        ex: if 1 is deleted then $renumber=false: [0=>0,1=>1,2=>2] =>  [0=>0,2=>2]<br>
+     * @return $this
+     */
+    public
+    function removeRow($rowId, bool $renumber = false): ArrayOne
+    {
+        if ($this->currentArray === null) {
+            return $this;
+        }
+        unset($this->currentArray[$rowId]);
+        if ($renumber) {
+            $this->currentArray = array_values($this->currentArray);
+        }
+        $this->setCurrentArray($this->currentArray, false);
+        return $this;
+    }
+
+    /**
+     * It removes the first row or rows. Numeric index could be renumbered.
+     * <b>Example:</b><br>
+     * <pre>
+     * $this->removeFirstRow(3);
+     * </pre>
+     * @param int  $numberOfRows The number of rows to delete, the default is 1 (the first row)
+     * @param bool $renumber     if true then it renumber the list<br>
+     *                           ex: if 1 is deleted then $renumber=true: [0=>0,1=>1,'x'=>2] =>  [0=>0,1=>2]<br>
+     *                           ex: if 1 is deleted then $renumber=false: [0=>0,1=>1,2=>2] =>  [0=>0,2=>2]<br>
+     * @return $this
+     */
+    public
+    function removeFirstRow(int $numberOfRows = 1, bool $renumber = false): ArrayOne
+    {
+        if ($this->currentArray === null) {
+            return $this;
+        }
+        for ($i = 0; $i < $numberOfRows; $i++) {
+            array_shift($this->currentArray);
+        }
+        if ($renumber) {
+            $this->currentArray = array_values($this->currentArray);
+        }
+        $this->setCurrentArray($this->currentArray, false);
+        return $this;
+    }
+
+    /**
+     * It removes the last row or rows
+     * <b>Example:</b><br>
+     * <pre>
+     * $this->removeLastRow(3);
+     * </pre>
+     * @param int  $numberOfRows the number of rows to delete
+     * @param bool $renumber     if true then it renumber the list (since we are deleting the last value then
+     *                           usually we don't need it<br>
+     *                           ex: if 1 is deleted then $renumber=true: [0=>0,1=>1,2=>2] =>  [0=>0,1=>2]<br>
+     *                           ex: if 1 is deleted then $renumber=false: [0=>0,1=>1,2=>2] =>  [0=>0,2=>2]<br>
+     * @return $this
+     */
+    public
+    function removeLastRow(int $numberOfRows = 1, bool $renumber = false): ArrayOne
+    {
+        if ($this->currentArray === null) {
+            return $this;
+        }
+        for ($i = 0; $i < $numberOfRows; $i++) {
+            array_pop($this->currentArray);
+        }
+        if ($renumber) {
+            $this->currentArray = array_values($this->currentArray);
+        }
+        $this->setCurrentArray($this->currentArray, false);
+        return $this;
+    }
+
+    /**
+     * It generates a validate-array using an example array. It could be used by validation() and filter()<br>
+     * <b>Example:</b><br>
+     * <pre>
+     * $this->getValidateArrayByExample(['1','a','f'=>3.3]); // ['int','string','f'=>'float'];
+     * </pre>
+     * @param array $array
+     * @return array
+     */
+    public
+    static function getValidateArrayByExample(array $array): array
+    {
+        $result = [];
+        self::getValidateArrayByExampleRec($array, $result);
+        return $result;
+    }
+
+    protected
+    static function getValidateArrayByExampleRec($array, &$result): void
+    {
+        $v = null;
+        foreach ($array as $rowid => $row) {
+            switch (true) {
+                case is_null($row):
+                    $v = "nullable|string";
+                    break;
+                case is_int($row):
+                    $v = "int";
+                    break;
+                case is_float($row):
+                    $v = 'float';
+                    break;
+                case is_bool($row):
+                    $v = 'bool';
+                    break;
+                case is_string($row):
+                    $v = 'string';
+                    break;
+                case is_array($row):
+                    $keyPrevious = null;
+                    $table = true;
+                    foreach ($row as $k2 => $v2) {
+                        $result[$rowid][$k2] = [];
+                        self::getValidateArrayByExampleRec($v2, $result[$rowid][$k2]);
+                        $keys = array_keys($result[$rowid][$k2]);
+                        if ($keyPrevious !== null && $keys !== $keyPrevious) {
+                            $table = false;
+                        }
+                        $keyPrevious = $keys;
+                    }
+                    if ($table) {
+                        $result[$rowid] = [$result[$rowid][0]];
+                    }
+                    break;
+                default:
+                    $v = $row;
+            }
+            if (!is_array($row)) {
+                $result[$rowid] = $v;
+            }
+        }
     }
 
     /**
@@ -923,7 +1199,7 @@ class ArrayOne
      * @param array $comparisonTable <br>
      *                               <b>nullable</b> :the value can be a null. If the value is null, then it ignores
      *                               other validations<br>
-     *                               <b>contain</b> :if a text is contained in<br>
+     *                               <b>contain like</b> :if a text is contained in<br>
      *                               <b>notcontain</b> :if a text is not contained in<br>
      *                               <b>alpha</b> :if the value is alphabetic<br>
      *                               <b>alphanumunder</b> :if the value is alphanumeric or undercase<br>
@@ -969,7 +1245,8 @@ class ArrayOne
         return $this;
     }
 
-    protected function validateRec($comparisonTable, $values, $extraFieldError = false, $type = 'object'): array
+    protected
+    function validateRec($comparisonTable, $values, $extraFieldError = false, $type = 'object'): array
     {
         $final = [];
         if ($type === 'object') {
@@ -982,11 +1259,10 @@ class ArrayOne
         return $final;
     }
 
-    protected function validateRecInside($comparisonTable, $values, $extraFieldError = false, $rowId = null)
+    protected
+    function validateRecInside($comparisonTable, $values, $extraFieldError = false, $rowId = null)
     {
         $final = [];
-        //var_dump($values);
-        //var_dump($comparisonTable);
         $flatResult = false;
         if (!is_array($values)) {
             $values = [$values];
@@ -1071,7 +1347,8 @@ class ArrayOne
      * @param array $arrayMask An associative array with the mask. The mask could contain any value.
      * @return ArrayOne
      */
-    public function mask(array $arrayMask): ArrayOne
+    public
+    function mask(array $arrayMask): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -1081,7 +1358,8 @@ class ArrayOne
         return $this;
     }
 
-    public function maskRec(array $arrayMask, &$current): void
+    public
+    function maskRec(array $arrayMask, &$current): void
     {
         foreach ($current as $k => $v) {
             if (!array_key_exists($k, $arrayMask)) {

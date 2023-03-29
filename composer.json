@@ -4,7 +4,9 @@
   "type": "library",
   "keywords": [
     "php",
-    "array"
+    "array",
+    "csv",
+    "json"
   ],
   "homepage": "https://github.com/EFTEC/ArrayOne",
   "authors": [
@@ -17,7 +19,8 @@
   "license": "LGPL-3.0-only",
   "require": {
     "php": ">=7.2.5",
-    "ext-ctype": "*"
+    "ext-ctype": "*",
+    "ext-json": "*"
   },
   "require-dev": {
     "phpunit/phpunit": "^9.5.13"

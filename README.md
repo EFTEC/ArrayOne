@@ -26,6 +26,9 @@ What it does? Filter, order, renaming column, grouping, validating, amongst many
   * [Concepts](#concepts)
   * [initial operator](#initial-operator)
     * [set](#set)
+  * [setJson](#setjson)
+    * [setCsv](#setcsv)
+    * [setCsvHeadless](#setcsvheadless)
   * [middle operator](#middle-operator)
     * [col](#col)
     * [columnToIndex](#columntoindex)
@@ -43,15 +46,22 @@ What it does? Filter, order, renaming column, grouping, validating, amongst many
     * [npos](#npos)
     * [reduce](#reduce)
     * [removecol](#removecol)
+    * [removerow](#removerow)
+    * [removeFirstRow](#removefirstrow)
+  * [removeLastRow](#removelastrow)
     * [removeDuplicate](#removeduplicate)
     * [setCol](#setcol)
     * [sort](#sort)
+    * [createValidateExample](#createvalidateexample)
     * [validate](#validate)
   * [end operators](#end-operators)
     * [all](#all)
     * [result](#result)
+  * [other methods](#other-methods)
+    * [getValidateArrayByExample](#getvalidatearraybyexample)
   * [versions](#versions)
-  <!-- TOC -->
+  * [License](#license)
+<!-- TOC -->
 
 ## Basic examples
 
@@ -122,9 +132,44 @@ It must be the first operator unless you are using the constructor.
 
 ```php
 ArrayOne::set($array)->all();
-// or you can use the constructor.
-(new ArrayOne($array))->all();
+ArrayOne::set($array,$object)->all(); // the object is used by validation()
+ArrayOne::set($array,SomeClass:class)->all(); // the object is used by validation()
 ```
+* **parameter** array|null         $array
+* **parameter**  object|null|string $service the service instance. You can use the class or an object.
+
+## setJson
+It sets the array using a json.
+**Example:**
+```php
+ArrayOne::setJson('{"a":3,"b":[1,2,3]}')->all();
+```
+* **parameter** string $json the value to parse.
+
+### setCsv
+It sets the array using a csv. This csv must have a header.   
+**Example:**
+```php
+ArrayOne::setCsv("a,b,c\n1,2,3\n4,5,6")->all();
+```
+* **parameter** string $string the string to parse
+* **parameter** string $separator default ",". Set the field delimiter (one character only).
+* **parameter** string $enclosure default '"'. Set the field enclosure character (one character only).
+* **parameter** string $escape default "\\". Set the escape character (one character only).
+
+### setCsvHeadless
+It sets the array using a head-less csv.   
+**Example:**
+```php
+ArrayOne::setCsvHeadLess("1,2,3\n4,5,6")->all(); 
+ArrayOne::setCsvHeadLess("1,2,3\n4,5,6",['c1','c2','c3'])->all();
+```
+* **parameter** string $string the string to parse
+* **parameter** array|null $header If the header is null, then it creates an indexed array.   
+  if the header is an array, then it is used as header
+* **parameter** string $separator default ",". Set the field delimiter (one character only).
+* **parameter** string $enclosure default '"'. Set the field enclosure character (one character only).
+* **parameter** string $escape default "\\". Set the escape character (one character only).
 
 ## middle operator
 Middle operators are operators that are called between the initial operator **set()** and the end operator **all()** or **current()**.
@@ -301,6 +346,44 @@ $this->removeCol(['col1','col2']);
 ```
 * **parameter** mixed $colName The name of the column or columns (array)
 * **return value** $this
+
+### removerow
+It removes the row with the id **$rowId**. If the row does not exist, then it does nothing
+**Example:**  
+```php
+$this->removeRow(20);
+```
+* **parameter** mixed $rowId    The id of the row to delete
+* **parameter** bool  $renumber if true then it renumber the list<br>
+                       ex: if 1 is deleted then $renumber=true: [0=>0,1=>1,2=>2] =>  [0=>0,1=>2]  
+                       ex: if 1 is deleted then $renumber=false: [0=>0,1=>1,2=>2] =>  [0=>0,2=>2]  
+* **return value** $this
+
+### removeFirstRow
+It removes the first row or rows. Numeric index could be renumbered.
+**Example:**  
+```php
+$this->removeFirstRow(3);
+```
+* **parameter** int  $numberOfRows The number of rows to delete, the default is 1 (the first row)
+* **parameter** bool $renumber     if true then it renumber the list  
+ex: if 1 is deleted then $renumber=true: [0=>0,1=>1,'x'=>2] =>  [0=>0,1=>2]  
+ex: if 1 is deleted then $renumber=false: [0=>0,1=>1,2=>2] =>  [0=>0,2=>2]  
+* **return value** $this
+
+## removeLastRow
+It removes the last row or rows
+**Example:**
+```php
+$this->removeLastRow(3);
+```
+* **parameter** int  $numberOfRows the number of rows to delete
+* **parameter** bool $renumber     if true then it renumber the list (since we are deleting the last value then
+  usually we don't need it<br>
+  ex: if 1 is deleted then $renumber=true: [0=>0,1=>1,2=>2] =>  [0=>0,1=>2]<br>
+  ex: if 1 is deleted then $renumber=false: [0=>0,1=>1,2=>2] =>  [0=>0,2=>2]<br>
+* **return value** $this
+
 ### removeDuplicate
 ### setCol
 It adds or modify a column.
@@ -320,6 +403,11 @@ $this->sort('payment','desc'); // sort an array using the column paypent descend
 * **parameter** mixed  $column    if column is null, then it sorts the row (instead of a column of the row)
 * **parameter** string $direction =\['asc','desc'][$i]  ascending or descending.
 * **return value** $this
+
+### createValidateExample
+It creates a validation array using an example
+
+
 ### validate
 Validate the current array using a comparison table   
 **Example:**
@@ -369,7 +457,7 @@ ValidateOne
 |-------------------|-----------------------------------------------------------------------------------------------------|------------------------------|
 | nullable          | the value can be a null. **If the value is null, then it ignores other validations**                | nullable                     |
 | f:\<namefunction> | It calls a **custom function** defined in the service class. See example                            | f:myfunction                 |
-| contain           | if a text is contained in                                                                           | contain;\<text>              |
+| contain like      | if a text is contained in                                                                           | contain;\<text>              |
 | notcontain        | if a text is not contained in                                                                       | notcontain;\<text>           |
 | alpha             | if the value is alphabetic                                                                          | alpha                        |
 | alphanumunder     | if the value is alphanumeric or under-case                                                          | alphanumunder                |
@@ -428,9 +516,30 @@ $this->set($array)->nav('field')->current();
 ```
 * **return value** mixed
 
+## other methods
+Methods that does not fit in the other categories. Those methods are not stackable.
+
+### getValidateArrayByExample
+It generates a validate-array using an example array. It could be used by validation() and filter()<br>
+**Example:**
+```php
+$this->getValidateArrayByExample(['1','a','f'=>3.3]); // ['int','string','f'=>'float'];
+```
+* **parameter** array $array
+* **return value**  array
+
+
 ## versions
 
 * 1.0 2023-03-26 first version
+* 1.1 2023-03-28 
+  * method filter() now allow a comparison array and a callable function.
+  * new method getValidateArrayByExample()
+  * new method removeRow()
+  * new method removeFirstRow()
+  * new mehtod removeLastRow()
+  * new method setCsv()
+  * new method setJson()
 
 ## License
 
