@@ -26,7 +26,8 @@ What it does? Filter, order, renaming column, grouping, validating, amongst many
   * [Concepts](#concepts)
   * [initial operator](#initial-operator)
     * [set](#set)
-  * [setJson](#setjson)
+    * [setRequest](#setrequest)
+    * [setJson](#setjson)
     * [setCsv](#setcsv)
     * [setCsvHeadless](#setcsvheadless)
   * [middle operator](#middle-operator)
@@ -50,7 +51,7 @@ What it does? Filter, order, renaming column, grouping, validating, amongst many
     * [removeFirstRow](#removefirstrow)
   * [removeLastRow](#removelastrow)
     * [removeDuplicate](#removeduplicate)
-    * [setCol](#setcol)
+    * [modCol](#modcol)
     * [sort](#sort)
     * [createValidateExample](#createvalidateexample)
     * [validate](#validate)
@@ -58,7 +59,8 @@ What it does? Filter, order, renaming column, grouping, validating, amongst many
     * [all](#all)
     * [result](#result)
   * [other methods](#other-methods)
-    * [getValidateArrayByExample](#getvalidatearraybyexample)
+    * [makeValidateArrayByExample](#makevalidatearraybyexample)
+    * [makeRequestArrayByExample](#makerequestarraybyexample)
   * [versions](#versions)
   * [License](#license)
 <!-- TOC -->
@@ -138,7 +140,34 @@ ArrayOne::set($array,SomeClass:class)->all(); // the object is used by validatio
 * **parameter** array|null         $array
 * **parameter**  object|null|string $service the service instance. You can use the class or an object.
 
-## setJson
+### setRequest
+It sets the initial array readint the values from the request (get/post/header/etc).  
+**Example:**
+```php
+ArrayOne::setRequest([
+    'id'=>'get', // $_GET['id'] if not found then it uses the default value (null)
+    'name'=>'post|default', // $_POST['name'], if not found then it uses "default"
+    'content'=>'body' // it reads from the POST body
+],null); // null is the default value if not other default value is set.
+```
+* **parameter** array   $fields An associative array when the values to read 'id'=>'type;defaultvalue'.
+  Types:  
+  <b>get</b>: get it from the query string   
+  <b>post</b>: get it from the post  
+  <b>header</b>: get if from the header  
+  <b>request</b>: get if from the post, otherwise from get  
+  <b>cookie</b>: get if from the cookies  
+  <b>body</b>: get if from the post body (values are not serialized)  
+  <b>verb</b>: get if from the request method (GET/POST/PUT,etc.)
+* **parameter** mixed   $defaultValueAll the default value if the value is not found and not other default value is set.
+* **parameter** ?string $separator       Def:'.', The separator character used when the field is nested.  
+  example using '.' as separator html:<input name='a.b' value="hello" />  
+  result obtained:$result\['a']\['b']='hello';
+* **return value** ArrayOne
+
+
+
+### setJson
 It sets the array using a json.
 **Example:**
 ```php
@@ -385,11 +414,19 @@ $this->removeLastRow(3);
 * **return value** $this
 
 ### removeDuplicate
-### setCol
+This function removes duplicates of a table.  
+**Example:**
+```php
+$this->removeDuplicate('col');
+```
+* **parameter** mixed $colName the column to compare if the rows are duplicated.
+* **return value** $this
+
+### modCol
 It adds or modify a column.
 **Example:**
 ```php
-$this->setCol('col1',function($row,$index) { return $row['col2']*$row['col3'];  });
+$this->modCol('col1',function($row,$index) { return $row['col2']*$row['col3'];  });
 ```
 * **parameter** string|int|null $colName   the name of the column. If null, then it uses the entire row
 * **parameter** callable|null   $operation the operation to realize.
@@ -519,20 +556,34 @@ $this->set($array)->nav('field')->current();
 ## other methods
 Methods that does not fit in the other categories. Those methods are not stackable.
 
-### getValidateArrayByExample
+### makeValidateArrayByExample
 It generates a validate-array using an example array. It could be used by validation() and filter()<br>
 **Example:**
 ```php
-$this->getValidateArrayByExample(['1','a','f'=>3.3]); // ['int','string','f'=>'float'];
+$this->makeValidateArrayByExample(['1','a','f'=>3.3]); // ['int','string','f'=>'float'];
 ```
 * **parameter** array $array
 * **return value**  array
 
+### makeRequestArrayByExample
+It creates an associative array that could be used to be used by setRequest()  
+**Example:**
+```php
+$this->makeRequestArrayByExample(['a'=1,'b'=>2]); // ['a'='post','b'=>'post'];
+```
+* **parameter** array  $array An associative array with some values.
+* **parameter** string $type=\['get','post','request','header','cookie'][$i] The default type
+* **return value** array
+
+
 
 ## versions
-
-* 1.0 2023-03-26 first version
-* 1.1 2023-03-28 
+* 1.2 
+  * renamed method getValidateArrayByExample() to makeValidateArrayByExample()
+  * new method makeRequestArrayByExample()
+  * new method setRequest()
+  * rename method setCol() to modCol(). Methods that start with "set" are used to initialize the variable.
+* 1.1 2023-03-28
   * method filter() now allow a comparison array and a callable function.
   * new method getValidateArrayByExample()
   * new method removeRow()
@@ -540,6 +591,8 @@ $this->getValidateArrayByExample(['1','a','f'=>3.3]); // ['int','string','f'=>'f
   * new mehtod removeLastRow()
   * new method setCsv()
   * new method setJson()
+* 1.0 2023-03-26 first version
+
 
 ## License
 

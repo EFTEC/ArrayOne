@@ -12,7 +12,7 @@ use RuntimeException;
  */
 class ArrayOne
 {
-    public const VERSION = "1.1";
+    public const VERSION = "1.2";
     /** @var array|null */
     protected $array;
     protected $serviceObject;
@@ -22,7 +22,7 @@ class ArrayOne
     public static $error = '';
 
     /**
-     * Constructor<br>
+     * Constructor<br/>
      * You can use (new ArrayOne($array))->method() or use ArrayOne::set($array)->method();
      * @param array|null $array
      */
@@ -43,7 +43,7 @@ class ArrayOne
 
     /**
      * It sets the array to be transformed, and it starts the pipeline
-     * <b>Example:</b><br>
+     * <b>Example:</b><br/>
      * <pre>
      * ArrayOne::set($array)->all();
      * ArrayOne::set($array,$object)->all(); // the object is used by validate()
@@ -65,8 +65,98 @@ class ArrayOne
     }
 
     /**
+     * It sets the initial array readint the values from the request (get/post/header/etc.<br/>
+     * <b>Example:</b><br/>
+     * <pre>
+     * ArrayOne::setRequest([
+     *     'id'=>'get', // $_GET['id'] if not found then it uses the default value (null)
+     *     'name'=>'post|default', // $_POST['name'], if not found then it uses "default"
+     *     'content'=>'body' // it reads from the POST body
+     * ],null); // null is the default value if not other default value is set.
+     * </pre>
+     * @param array   $fields          An associative array when the values to read 'id'=>'type;defaultvalue'.
+     *                                 Types:<br/>
+     *                                 <b>get</b>: get it from the query string <br/>
+     *                                 <b>post</b>: get it from the post<br/>
+     *                                 <b>header</b>: get if from the header<br/>
+     *                                 <b>request</b>: get if from the post, otherwise from get<br/>
+     *                                 <b>cookie</b>: get if from the cookies<br/>
+     *                                 <b>body</b>: get if from the post body (values are not serialized)<br/>
+     *                                 <b>verb</b>: get if from the request method (GET/POST/PUT,etc.)<br/>
+     * @param mixed   $defaultValueAll the default value if the value is not found and not other default value is set.
+     * @param ?string $separator       Def:'.', The separator character used when the field is nested.<br/>
+     *                                 example using '.' as separator html:<input name='a.b' value="hello" /><br/>
+     *                                 result obtained:$result['a']['b']='hello';
+     * @return ArrayOne
+     */
+    public static function setRequest(array $fields, $defaultValueAll = null, ?string $separator = '.'): ArrayOne
+    {
+        self::setRequestRec($fields, $defaultValueAll, $separator, '');
+        return self::set($fields);
+    }
+
+    public static function setRequestRec(&$req, $defaultValueAll, $separator, $prefix)
+    {
+        if ($req === null) {
+            return $req;
+        }
+        foreach ($req as $k => $v) {
+            if (is_array($v)) {
+                if (count($v) === 1 && isset($v[0])) {
+                    // is a table
+                    $cols = [];
+                    foreach ($v[0] as $k2 => $v2) {
+                        $cols[$k2] = [$k2 => $v2];
+                        self::setRequestRec($cols[$k2], $defaultValueAll, $separator, $prefix . $k . $separator);
+                    }
+                    $table = [];
+                    foreach ($cols as $k2 => $v2) {
+                        foreach ($v2[$k2] as $k3 => $v3) {
+                            $table[$k3][$k2] = $v3;
+                        }
+                    }
+                    $req[$prefix . $k] = $table;
+                } else {
+                    // is an object or a structure.
+                    self::setRequestRec($req[$prefix . $k], $defaultValueAll, $separator, $prefix . $k . $separator);
+                }
+            } else {
+                $v = explode(';', $v);
+                $type = $v[0];
+                $default = array_key_exists(1, $v) ? $v[1] : $defaultValueAll;
+                switch (strtolower($type)) {
+                    case 'post':
+                        $req[$k] = $_POST[$prefix . $k] ?? $default;
+                        break;
+                    case 'get':
+                        $req[$k] = $_GET[$prefix . $k] ?? $default;
+                        break;
+                    case 'request':
+                        $req[$k] = $_POST[$prefix . $k] ?? ($_GET[$prefix . $k] ?? $default);
+                        break;
+                    case 'cookie':
+                        $req[$k] = $_COOKIE[$prefix . $k] ?? $default;
+                        break;
+                    case 'body':
+                        $req[$k] = file_get_contents('php://input') ?: $default;
+                        break;
+                    case 'verb':
+                        $req[$k] = $_SERVER['REQUEST_METHOD'] ?: $default;
+                        break;
+                    case 'header':
+                        $req[$prefix . $k] = $_SERVER['HTTP_' . $prefix . $k] ?? $default;
+                        break;
+                    default:
+                        throw new RuntimeException("ArrayOne::unknow request type [$type]");
+                }
+            }
+        }
+        return $req;
+    }
+
+    /**
      * It sets the array using a json.
-     * <b>Example:</b><br>
+     * <b>Example:</b><br/>
      * <pre>
      * ArrayOne::setJson('{"a":3,"b":[1,2,3]}')->all();
      * </pre>
@@ -80,8 +170,8 @@ class ArrayOne
     }
 
     /**
-     * It sets the array using a csv. This csv must have a header.<br>
-     * <b>Example:</b><br>
+     * It sets the array using a csv. This csv must have a header.<br/>
+     * <b>Example:</b><br/>
      * <pre>
      * ArrayOne::setCsv("a,b,c\n1,2,3\n4,5,6")->all();
      * </pre>
@@ -105,14 +195,14 @@ class ArrayOne
     }
 
     /**
-     * It sets the array using a head-less csv.<br>
-     * <b>Example:</b><br>
+     * It sets the array using a head-less csv.<br/>
+     * <b>Example:</b><br/>
      * <pre>
      * ArrayOne::setCsvHeadLess("1,2,3\n4,5,6")->all();
      * ArrayOne::setCsvHeadLess("1,2,3\n4,5,6",['c1','c2','c3'])->all();
      * </pre>
      * @param string     $string    the string to parse
-     * @param array|null $header    If the header is null, then it creates an indexed array.<br>
+     * @param array|null $header    If the header is null, then it creates an indexed array.<br/>
      *                              if the header is an array, then it is used as header
      * @param string     $separator default ",". Set the field delimiter (one character only).
      * @param string     $enclosure default '"'. Set the field enclosure character (one character only).
@@ -133,17 +223,17 @@ class ArrayOne
     }
 
     /**
-     * Navigate inside the arrays.<br>
+     * Navigate inside the arrays.<br/>
      * If you want to select a subcolumn, then you could indicate it separated by dot: column.subcolumn. You
      * can separate up to 5 levels.
      *
-     * <b>Example:</b><br>
+     * <b>Example:</b><br/>
      * <pre>
      * $this->nav('col');
      * $this->nav(); // return to root.
      * $this->nav('col.subcol.subsubcol'); //  [col=>[subcol=>[subsubcol=>[1,2,3]]]] returns  [1,2,3]
      * </pre>
-     * @param string|int|null $colName   the name of the field. If null then it returns to the root.<br>
+     * @param string|int|null $colName   the name of the field. If null then it returns to the root.<br/>
      *                                   You can add more leves by separating by "."
      * @return $this
      */
@@ -203,8 +293,8 @@ class ArrayOne
     }
 
     /*
-     * Returns the whole array transformed and not only the current navigation.<br>
-     * <b>Example:</b><br>
+     * Returns the whole array transformed and not only the current navigation.<br/>
+     * <b>Example:</b><br/>
      * <pre>
      * $this->set($array)->nav('field')->all();
      * </pre>
@@ -216,7 +306,7 @@ class ArrayOne
 
     /**
      * Returns the result indicated by nav(). If you want to return the whole array, then use a()
-     * <b>Example:</b><br>
+     * <b>Example:</b><br/>
      * <pre>
      * $this->set($array)->nav('field')->current();
      * </pre>
@@ -229,15 +319,15 @@ class ArrayOne
 
     /**
      * It adds or modify a column.
-     * <b>Example:</b><br>
+     * <b>Example:</b><br/>
      * <pre>
-     * $this->setCol('col1',function($row,$index) { return $row['col2']*$row['col3'];  });
+     * $this->modCol('col1',function($row,$index) { return $row['col2']*$row['col3'];  });
      * </pre>
      * @param string|int|null $colName   the name of the column. If null, then it uses the entire row
      * @param callable|null   $operation the operation to realize.
      * @return $this
      */
-    public function setCol($colName = null, ?callable $operation = null): ArrayOne
+    public function modCol($colName = null, ?callable $operation = null): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -254,8 +344,8 @@ class ArrayOne
     }
 
     /**
-     * It removes a column<br>
-     * <b>Example:</b><br>
+     * It removes a column<br/>
+     * <b>Example:</b><br/>
      * <pre>
      * $this->removeCol('col1');
      * $this->removeCol(['col1','col2']);
@@ -281,8 +371,8 @@ class ArrayOne
     }
 
     /**
-     * Returns a single column as an array of values.<br>
-     * <b>Example:</b><br>
+     * Returns a single column as an array of values.<br/>
+     * <b>Example:</b><br/>
      * <pre>
      * $this->col('c1'); // [['c1'=>1,'c2'=>2],['c1'=>3,'c2'=>4]] => [['c1'=>1],['c1'=>3]];
      * </pre>
@@ -301,9 +391,9 @@ class ArrayOne
     }
 
     /**
-     * Joins the current array with another array<br>
-     * If the columns of both arrays have the same name, then the current name is retained.<br>
-     * <b>Example:</b><br>
+     * Joins the current array with another array<br/>
+     * If the columns of both arrays have the same name, then the current name is retained.<br/>
+     * <b>Example:</b><br/>
      * <pre>
      * $products=[['id'=>1,'name'=>'cocacola','idtype'=>123]];
      * $types=[['id'=>123,'desc'=>'it is the type #123']];
@@ -334,9 +424,9 @@ class ArrayOne
     }
 
     /**
-     * It filters the values. If the condition is false, then the row is deleted. It uses array_filter()<br>
+     * It filters the values. If the condition is false, then the row is deleted. It uses array_filter()<br/>
      * The indexes are not rebuilt.
-     * <b>Example:</b><br>
+     * <b>Example:</b><br/>
      * <pre>
      * $array = [['id' => 1, 'name' => 'chile'], ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']];
      * // ['id' => 2, 'name' => 'argentina']
@@ -344,7 +434,7 @@ class ArrayOne
      * // [1=>['id' => 2, 'name' => 'argentina']]
      * $r = ArrayOne::set($array)->filter(function($row, $id) {return $row['id'] === 2;}, false)->result();
      * </pre>
-     * @param callable|null|array $condition you can use a callable function ($row,$id)<br>
+     * @param callable|null|array $condition you can use a callable function ($row,$id)<br/>
      *                                       or a comparison array ['id'=>'eq;2']
      * @param bool                $flat
      * @return $this
@@ -395,8 +485,8 @@ class ArrayOne
                         $compValue = explode(',', $compValue);
                     }
                     $msg = '';
-                    $this->runCondition($r,$compValue,$type,$fail,$msg);
-                    if($fail) {
+                    $this->runCondition($r, $compValue, $type, $fail, $msg);
+                    if ($fail) {
                         break 2;
                     }
                 }
@@ -410,23 +500,21 @@ class ArrayOne
      * @param callable|null $condition The function to call.
      * @return $this
      */
-    public
-    function map(?callable $condition): ArrayOne
+    public function map(?callable $condition): ArrayOne
     {
         $this->setCurrentArray(array_map($condition, $this->currentArray));
         return $this;
     }
 
     /**
-     * It flats the results. If the result is an array with a single row, then it returns the row without the array<br>
-     * <b>Example:</b><br>
+     * It flats the results. If the result is an array with a single row, then it returns the row without the array<br/>
+     * <b>Example:</b><br/>
      * <pre>
      * $this->flat(); // [['a'=>1,'b'=>2]] => ['a'=>1,'b'=>2]
      * </pre>
      * @return $this
      */
-    public
-    function flat(): ArrayOne
+    public function flat(): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -440,8 +528,7 @@ class ArrayOne
     }
 
     /** @noinspection TypeUnsafeArraySearchInspection */
-    private
-    function runCondition($r, $compareValue, $compareType, bool &$fail, ?string &$genMsg): void
+    private function runCondition($r, $compareValue, $compareType, bool &$fail, ?string &$genMsg): void
     {
         if (strpos($compareType, 'f:') === 0) {
             if ($this->serviceObject === null) {
@@ -705,8 +792,8 @@ class ArrayOne
                 break;
             default:
                 throw new RuntimeException("ArrayOne comparison [$compareType] does not exist");
-                //$fail = true;
-                //$genMsg = "Unknown comparison [$compareType]";
+            //$fail = true;
+            //$genMsg = "Unknown comparison [$compareType]";
         }
     }
 
@@ -714,8 +801,7 @@ class ArrayOne
      * It returns the first element of an array.
      * @return $this
      */
-    public
-    function first(): ArrayOne
+    public function first(): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -728,8 +814,7 @@ class ArrayOne
      * It returns the last element of an array.
      * @return $this
      */
-    public
-    function last(): ArrayOne
+    public function last(): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -743,8 +828,7 @@ class ArrayOne
      * @param $index
      * @return $this
      */
-    public
-    function nPos($index): ArrayOne
+    public function nPos($index): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -762,8 +846,7 @@ class ArrayOne
      * @param bool  $overwrite
      * @return void
      */
-    protected
-    function setCurrentArray($values, bool $overwrite = true): void
+    protected function setCurrentArray($values, bool $overwrite = true): void
     {
         if ($overwrite) {
             $this->currentArray = $values;
@@ -796,19 +879,18 @@ class ArrayOne
 
     /**
      * You can reduce (flat) an array using aggregations or a custom function.
-     * <b>Example:</b><br>
+     * <b>Example:</b><br/>
      * <pre>
      * $this->reduce(['col1'=>'sum','col2'=>'avg','col3'=>'min','col4'=>'max']);
      * $this->reduce(function($row,$index,$prev) { return ['col1'=>$row['col1']+$prev['col1]];  });
      * </pre>
      * @param array|callable $functionAggregation An associative array where the index is the column and the value
-     *                                            is the function of aggregation<br>
+     *                                            is the function of aggregation<br/>
      *                                            A function using the syntax: function ($row,$index,$prev) where $prev
      *                                            is the accumulator value
      * @return $this
      */
-    public
-    function reduce($functionAggregation): ArrayOne
+    public function reduce($functionAggregation): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -835,7 +917,7 @@ class ArrayOne
             foreach ($this->currentArray as $row) {
                 if ($skip) {
                     $skip = false;
-                } else {
+                } else if (is_array($row)) {
                     foreach ($functionAggregation as $col => $fun) {
                         switch ($fun) {
                             case 'sum':
@@ -869,16 +951,15 @@ class ArrayOne
     }
 
     /**
-     * It converts the index into a field, and renumerates the array<br>
-     * <b>Example:</b><br>
+     * It converts the index into a field, and renumerates the array<br/>
+     * <b>Example:</b><br/>
      * <pre>
      * $this->indexToField('colnew'); // ['a'=>['col1'=>'b','col2'=>'c']] => [['colnew'=>'a','col1'=>'b','col2'=>'c']
      * </pre>
      * @param mixed $newColumn the name of the new column
      * @return $this
      */
-    public
-    function indexToColumn($newColumn): ArrayOne
+    public function indexToColumn($newColumn): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -892,16 +973,15 @@ class ArrayOne
     }
 
     /**
-     * it converts a column into an index<br>
-     * <b>Example:</b><br>
+     * it converts a column into an index<br/>
+     * <b>Example:</b><br/>
      * <pre>
      * $this->indexToField('colold'); //  [['colold'=>'a','col1'=>'b','col2'=>'c'] => ['a'=>['col1'=>'b','col2'=>'c']]
      * </pre>
      * @param mixed $oldColumn the old column. This column will be converted into an index
      * @return $this
      */
-    public
-    function columnToIndex($oldColumn): ArrayOne
+    public function columnToIndex($oldColumn): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -917,25 +997,24 @@ class ArrayOne
     }
 
     /**
-     * It groups one column and return its column grouped and values aggregated<br>
-     * <b>Example:</b><br>
+     * It groups one column and return its column grouped and values aggregated<br/>
+     * <b>Example:</b><br/>
      * <pre>
      * $this->group('type',['amount'=>'sum','price'=>'sum']);
      * </pre>
      * @param mixed $column              the column to group.
-     * @param array $functionAggregation An associative array ['colname'=>'aggregation'] with the aggregations<br>
-     *                                   <b>count</b>: Count<br>
-     *                                   <b>avg</b>: Average<br>
-     *                                   <b>min</b>: Minimum<br>
-     *                                   <b>max</b>: Maximum<br>
-     *                                   <b>sum</b>: Sum<br>
-     *                                   <b>first</b>: First<br>
-     *                                   <b>last</b>: last<br>
+     * @param array $functionAggregation An associative array ['colname'=>'aggregation'] with the aggregations<br/>
+     *                                   <b>count</b>: Count<br/>
+     *                                   <b>avg</b>: Average<br/>
+     *                                   <b>min</b>: Minimum<br/>
+     *                                   <b>max</b>: Maximum<br/>
+     *                                   <b>sum</b>: Sum<br/>
+     *                                   <b>first</b>: First<br/>
+     *                                   <b>last</b>: last<br/>
      *
      * @return $this
      */
-    public
-    function group($column, array $functionAggregation): ArrayOne
+    public function group($column, array $functionAggregation): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -990,8 +1069,8 @@ class ArrayOne
     }
 
     /**
-     * Sort an array<br>
-     * <b>Example:</b><br>
+     * Sort an array<br/>
+     * <b>Example:</b><br/>
      * <pre>
      * $this->sort('payment','desc'); // sort an array using the column paypent descending.
      * </pre>
@@ -999,8 +1078,7 @@ class ArrayOne
      * @param string $direction =['asc','desc'][$i]  ascending or descending.
      * @return $this
      */
-    public
-    function sort($column, string $direction = 'asc'): ArrayOne
+    public function sort($column, string $direction = 'asc'): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -1027,33 +1105,45 @@ class ArrayOne
     }
 
     /**
-     * todo: pending.
-     * @param mixed $colName
+     * This function removes duplicates of a table.<br/>
+     * <b>Example:</b><br/>
+     * <pre>
+     * $this->removeDuplicate('col');
+     * </pre>
+     * @param mixed $colName the column to compare if the rows are duplicated.
      * @return $this
      */
-    public
-    function removeDuplicate($colName): ArrayOne
+    public function removeDuplicate($colName): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
         }
+        $exist = [];
+        foreach ($this->currentArray as $numrow => $row) {
+            if (isset($row[$colName]) && in_array($row[$colName], $exist, true)) {
+                // duplicated.
+                unset($this->currentArray[$numrow]);
+            } else {
+                $exist[] = $row[$colName] ?? null;
+            }
+        }
+        $this->setCurrentArray($this->currentArray, false);
         return $this;
     }
 
     /**
      * It removes the row with the id $rowId. If the row does not exist, then it does nothing
-     * <b>Example:</b><br>
+     * <b>Example:</b><br/>
      * <pre>
      * $this->removeRow(20);
      * </pre>
      * @param mixed $rowId    The id of the row to delete
-     * @param bool  $renumber if true then it renumber the list<br>
-     *                        ex: if 1 is deleted then $renumber=true: [0=>0,1=>1,2=>2] =>  [0=>0,1=>2]<br>
-     *                        ex: if 1 is deleted then $renumber=false: [0=>0,1=>1,2=>2] =>  [0=>0,2=>2]<br>
+     * @param bool  $renumber if true then it renumber the list<br/>
+     *                        ex: if 1 is deleted then $renumber=true: [0=>0,1=>1,2=>2] =>  [0=>0,1=>2]<br/>
+     *                        ex: if 1 is deleted then $renumber=false: [0=>0,1=>1,2=>2] =>  [0=>0,2=>2]<br/>
      * @return $this
      */
-    public
-    function removeRow($rowId, bool $renumber = false): ArrayOne
+    public function removeRow($rowId, bool $renumber = false): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -1068,18 +1158,17 @@ class ArrayOne
 
     /**
      * It removes the first row or rows. Numeric index could be renumbered.
-     * <b>Example:</b><br>
+     * <b>Example:</b><br/>
      * <pre>
      * $this->removeFirstRow(3);
      * </pre>
      * @param int  $numberOfRows The number of rows to delete, the default is 1 (the first row)
-     * @param bool $renumber     if true then it renumber the list<br>
-     *                           ex: if 1 is deleted then $renumber=true: [0=>0,1=>1,'x'=>2] =>  [0=>0,1=>2]<br>
-     *                           ex: if 1 is deleted then $renumber=false: [0=>0,1=>1,2=>2] =>  [0=>0,2=>2]<br>
+     * @param bool $renumber     if true then it renumber the list<br/>
+     *                           ex: if 1 is deleted then $renumber=true: [0=>0,1=>1,'x'=>2] =>  [0=>0,1=>2]<br/>
+     *                           ex: if 1 is deleted then $renumber=false: [0=>0,1=>1,2=>2] =>  [0=>0,2=>2]<br/>
      * @return $this
      */
-    public
-    function removeFirstRow(int $numberOfRows = 1, bool $renumber = false): ArrayOne
+    public function removeFirstRow(int $numberOfRows = 1, bool $renumber = false): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -1096,19 +1185,18 @@ class ArrayOne
 
     /**
      * It removes the last row or rows
-     * <b>Example:</b><br>
+     * <b>Example:</b><br/>
      * <pre>
      * $this->removeLastRow(3);
      * </pre>
      * @param int  $numberOfRows the number of rows to delete
      * @param bool $renumber     if true then it renumber the list (since we are deleting the last value then
-     *                           usually we don't need it<br>
-     *                           ex: if 1 is deleted then $renumber=true: [0=>0,1=>1,2=>2] =>  [0=>0,1=>2]<br>
-     *                           ex: if 1 is deleted then $renumber=false: [0=>0,1=>1,2=>2] =>  [0=>0,2=>2]<br>
+     *                           usually we don't need it<br/>
+     *                           ex: if 1 is deleted then $renumber=true: [0=>0,1=>1,2=>2] =>  [0=>0,1=>2]<br/>
+     *                           ex: if 1 is deleted then $renumber=false: [0=>0,1=>1,2=>2] =>  [0=>0,2=>2]<br/>
      * @return $this
      */
-    public
-    function removeLastRow(int $numberOfRows = 1, bool $renumber = false): ArrayOne
+    public function removeLastRow(int $numberOfRows = 1, bool $renumber = false): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -1124,26 +1212,35 @@ class ArrayOne
     }
 
     /**
-     * It generates a validate-array using an example array. It could be used by validation() and filter()<br>
-     * <b>Example:</b><br>
+     * It generates a validate-array using an example array. It could be used by validation() and filter()<br/>
+     * <b>Example:</b><br/>
      * <pre>
-     * $this->getValidateArrayByExample(['1','a','f'=>3.3]); // ['int','string','f'=>'float'];
+     * $this->makeValidateArrayByExample(['1','a','f'=>3.3]); // ['int','string','f'=>'float'];
      * </pre>
      * @param array $array
      * @return array
      */
-    public
-    static function getValidateArrayByExample(array $array): array
+    public static function makeValidateArrayByExample(array $array): array
     {
         $result = [];
-        self::getValidateArrayByExampleRec($array, $result);
+        self::makeValidateArrayByExampleRec($array, $result);
         return $result;
     }
 
-    protected
-    static function getValidateArrayByExampleRec($array, &$result): void
+    /**
+     * It is a recursive function used by makeValidateArrayByExample()
+     * @param $array
+     * @param $result
+     * @return void
+     */
+    protected static function makeValidateArrayByExampleRec($array, &$result): void
     {
         $v = null;
+        $up = false;
+        if (!is_array($array)) {
+            $array = [$array];
+            $up = true;
+        }
         foreach ($array as $rowid => $row) {
             switch (true) {
                 case is_null($row):
@@ -1166,12 +1263,15 @@ class ArrayOne
                     $table = true;
                     foreach ($row as $k2 => $v2) {
                         $result[$rowid][$k2] = [];
-                        self::getValidateArrayByExampleRec($v2, $result[$rowid][$k2]);
-                        $keys = array_keys($result[$rowid][$k2]);
-                        if ($keyPrevious !== null && $keys !== $keyPrevious) {
-                            $table = false;
+                        self::makeValidateArrayByExampleRec($v2, $result[$rowid][$k2]);
+                        /** @noinspection PhpConditionAlreadyCheckedInspection */
+                        if (is_array($result[$rowid][$k2])) {
+                            $keys = array_keys($result[$rowid][$k2]);
+                            if ($keyPrevious !== null && $keys !== $keyPrevious) {
+                                $table = false;
+                            }
+                            $keyPrevious = $keys;
                         }
-                        $keyPrevious = $keys;
                     }
                     if ($table) {
                         $result[$rowid] = [$result[$rowid][0]];
@@ -1184,11 +1284,81 @@ class ArrayOne
                 $result[$rowid] = $v;
             }
         }
+        if ($up) {
+            $result = $result[0];
+        }
     }
 
     /**
-     * Validate the current array using a comparison table<br>
-     * <b>Example:</b><br>
+     * It creates an associative array that could be used to be used by setRequest()<br/>
+     * <b>Example:</b><br/>
+     * <pre>
+     * $this->makeRequestArrayByExample(['a'=1,'b'=>2]); // ['a'='post','b'=>'post'];
+     * </pre>
+     *
+     * @param array  $array An associative array with some values.
+     * @param string $type  =['get','post','request','header','cookie'][$i] The default type
+     * @return array
+     */
+    public static function makeRequestArrayByExample(array $array, string $type = 'post'): array
+    {
+        //$result = [];
+        return self::makeWalk($array, static function() use ($type) {
+            return $type;
+        }, true);
+    }
+
+    /**
+     * We call a method for every element of the array recursively.<br/>
+     * <b>Example:</b><br/>
+     * <pre>
+     * ArrayOne::makeWalk(['a'=>'hello','b'=>['c'=>'world'],function($row,$id) { return strotupper($row);});
+     * </pre>
+     * @param array    $array         Our initial array
+     * @param callable $method        the method to call, example: function($row,$index) { return $row; }
+     * @param bool     $identifyTable (def: false) if we want the array identify inside arrays as table
+     * @return array
+     */
+    public static function makeWalk(array $array, callable $method, bool $identifyTable = false): array
+    {
+        $result = [];
+        self::makeWalkRec($array, $result, $method, $identifyTable);
+        return $result;
+    }
+
+    protected static function makeWalkRec($array, &$result, callable $method, bool $identifyTable): void
+    {
+        $lower = false;
+        if (!is_array($array)) {
+            $lower = true;
+            $array = [$array];
+        }
+        foreach ($array as $rowid => $row) {
+            if (is_array($row)) {
+                $table = array_key_exists(0, $row) && $identifyTable;
+                foreach ($row as $k2 => $v2) {
+                    $result[$rowid][$k2] = [];
+                    self::makeWalkRec($v2, $result[$rowid][$k2], $method, $identifyTable);
+                }
+                // [[a:1,b:2],[a:2,b:2]] is table
+                // ['a','b','c'] is not table
+                // ['x':[a:1,b:2],'y':[a:2,b:2]] is not table
+                if ($table) {
+                    $result[$rowid] = [$result[$rowid][0]];
+                }
+            }
+            if (!is_array($row)) {
+                $result[$rowid] = $method($row, $rowid);
+            }
+        }
+        if ($lower) {
+            $result = $result[0];
+        }
+    }
+
+    /**
+     * Validate the current array using a comparison table<br/>
+     * <b>Example:</b><br/>
      * <pre>
      * $this->validate([
      *          'id'=>'int',
@@ -1196,42 +1366,42 @@ class ArrayOne
      *          'list'=>[['int']]
      *     ]);
      * </pre>
-     * @param array $comparisonTable <br>
+     * @param array $comparisonTable <br/>
      *                               <b>nullable</b> :the value can be a null. If the value is null, then it ignores
-     *                               other validations<br>
-     *                               <b>contain like</b> :if a text is contained in<br>
-     *                               <b>notcontain</b> :if a text is not contained in<br>
-     *                               <b>alpha</b> :if the value is alphabetic<br>
-     *                               <b>alphanumunder</b> :if the value is alphanumeric or undercase<br>
-     *                               <b>alphanum</b> :if the value is alphanumeric<br>
-     *                               <b>text</b> :if the value is a text<br>
-     *                               <b>regexp</b> :if the value match a regular expression<br>
-     *                               <b>email</b> :if the value is an email<br>
-     *                               <b>url</b> :if the value is an url<br>
-     *                               <b>domain</b> :if the value is a domain<br>
-     *                               <b>minlen</b> :the value must have a minimum lenght<br>
-     *                               <b>maxlen</b> :the value must have a maximum lenght<br>
-     *                               <b>betweenlen</b> :if the value has a size between<br>
-     *                               <b>exist</b> :if the value exists<br>
-     *                               <b>missing notexist</b> :if the value not exist<br>
-     *                               <b>req required</b> :if the value is required<br>
-     *                               <b>eq ==</b> :if the value is equals to<br>
-     *                               <b>ne != <></b> :if the value is not equals to<br>
-     *                               <b>null</b> :if the value is null<br>
-     *                               <b>empty</b> :if the value is empty<br>
-     *                               <b>notnull</b> :if the value is not null<br>
-     *                               <b>lt</b> :if the value is less than<br>
-     *                               <b>lte</b> :if the value is less or equals than<br>
-     *                               <b>gt</b> :if the value is great than<br>
-     *                               <b>gte</b> :if the value is great or equals than<br>
-     *                               <b>between</b> :if the value is between<br>
-     *                               <b>true</b> :if the value is true<br>
-     *                               <b>false</b> :if the value is false<br>
-     *                               <b>array</b> :if the value is an array<br>
-     *                               <b>int</b> :if the value is an integer<br>
-     *                               <b>string</b> :if the value is a string<br>
-     *                               <b>float</b> :if the value is a float<br>
-     *                               <b>object</b> :if the value is an object<br>
+     *                               other validations<br/>
+     *                               <b>contain like</b> :if a text is contained in<br/>
+     *                               <b>notcontain</b> :if a text is not contained in<br/>
+     *                               <b>alpha</b> :if the value is alphabetic<br/>
+     *                               <b>alphanumunder</b> :if the value is alphanumeric or undercase<br/>
+     *                               <b>alphanum</b> :if the value is alphanumeric<br/>
+     *                               <b>text</b> :if the value is a text<br/>
+     *                               <b>regexp</b> :if the value match a regular expression<br/>
+     *                               <b>email</b> :if the value is an email<br/>
+     *                               <b>url</b> :if the value is an url<br/>
+     *                               <b>domain</b> :if the value is a domain<br/>
+     *                               <b>minlen</b> :the value must have a minimum lenght<br/>
+     *                               <b>maxlen</b> :the value must have a maximum lenght<br/>
+     *                               <b>betweenlen</b> :if the value has a size between<br/>
+     *                               <b>exist</b> :if the value exists<br/>
+     *                               <b>missing notexist</b> :if the value not exist<br/>
+     *                               <b>req required</b> :if the value is required<br/>
+     *                               <b>eq ==</b> :if the value is equals to<br/>
+     *                               <b>ne != <></b> :if the value is not equals to<br/>
+     *                               <b>null</b> :if the value is null<br/>
+     *                               <b>empty</b> :if the value is empty<br/>
+     *                               <b>notnull</b> :if the value is not null<br/>
+     *                               <b>lt</b> :if the value is less than<br/>
+     *                               <b>lte</b> :if the value is less or equals than<br/>
+     *                               <b>gt</b> :if the value is great than<br/>
+     *                               <b>gte</b> :if the value is great or equals than<br/>
+     *                               <b>between</b> :if the value is between<br/>
+     *                               <b>true</b> :if the value is true<br/>
+     *                               <b>false</b> :if the value is false<br/>
+     *                               <b>array</b> :if the value is an array<br/>
+     *                               <b>int</b> :if the value is an integer<br/>
+     *                               <b>string</b> :if the value is a string<br/>
+     *                               <b>float</b> :if the value is a float<br/>
+     *                               <b>object</b> :if the value is an object<br/>
      * @param bool  $extraFieldError if true and the current array has more values than comparison table, then
      *                               it returns an error.
      * @return $this
@@ -1245,8 +1415,7 @@ class ArrayOne
         return $this;
     }
 
-    protected
-    function validateRec($comparisonTable, $values, $extraFieldError = false, $type = 'object'): array
+    protected function validateRec($comparisonTable, $values, $extraFieldError = false, $type = 'object'): array
     {
         $final = [];
         if ($type === 'object') {
@@ -1259,14 +1428,13 @@ class ArrayOne
         return $final;
     }
 
-    protected
-    function validateRecInside($comparisonTable, $values, $extraFieldError = false, $rowId = null)
+    protected function validateRecInside($comparisonTable, $values, $extraFieldError = false, $rowId = null)
     {
         $final = [];
-        $flatResult = false;
+        $up = false;
         if (!is_array($values)) {
             $values = [$values];
-            $flatResult = true;
+            $up = true;
         }
         foreach ($values as $field => $node) {
             if (array_key_exists($field, $comparisonTable)) {
@@ -1328,17 +1496,17 @@ class ArrayOne
                 $final[$field] = $extraFieldError ? "fiend $field not found" : null;
             }
         }
-        if ($flatResult) {
+        if ($up) {
             $final = $final[0];
         }
         return $final;
     }
 
     /**
-     * It masks the current array using another array.<br>
-     * Masking deletes all field that are not part of our mask<br>
-     * The mask is smart to recognize a table, so it could mask multiples values by only specifying the first row.<br>
-     * <b>Example:</b><br>
+     * It masks the current array using another array.<br/>
+     * Masking deletes all field that are not part of our mask<br/>
+     * The mask is smart to recognize a table, so it could mask multiples values by only specifying the first row.<br/>
+     * <b>Example:</b><br/>
      * <pre>
      * $array=['a'=>1,'b'=>2,'c'=>3,'items'=>[[a1'=>1,'a2'=>2,'a3'=3],[a1'=>1,'a2'=>2,'a3'=3]];
      * $mask=['a'=>1,'items'=>[[a1'=>1]]; // [[a1'=>1]] masks an entire table
@@ -1347,8 +1515,7 @@ class ArrayOne
      * @param array $arrayMask An associative array with the mask. The mask could contain any value.
      * @return ArrayOne
      */
-    public
-    function mask(array $arrayMask): ArrayOne
+    public function mask(array $arrayMask): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -1358,9 +1525,19 @@ class ArrayOne
         return $this;
     }
 
-    public
-    function maskRec(array $arrayMask, &$current): void
+    /**
+     * It is a recursive function used by mask()
+     * @param array $arrayMask
+     * @param       $current
+     * @return void
+     */
+    protected function maskRec(array $arrayMask, &$current): void
     {
+        $up = false;
+        if (!is_array($current)) {
+            $current = [$current];
+            $up = true;
+        }
         foreach ($current as $k => $v) {
             if (!array_key_exists($k, $arrayMask)) {
                 unset($current[$k]);
@@ -1369,8 +1546,18 @@ class ArrayOne
                 if (array_key_exists(0, $am) && count($am) === 1) {
                     foreach ($v as $k2 => $v2) {
                         $this->maskRec($am[0], $current[$k][$k2]);
+                        if ($current[$k][$k2] === null) {
+                            unset($current[$k][$k2]);
+                        }
                     }
                 }
+            }
+        }
+        if ($up) {
+            if (array_key_exists(0, $current)) {
+                $current = $current[0];
+            } else if ($current === []) {
+                $current = null;
             }
         }
     }

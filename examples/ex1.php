@@ -14,7 +14,7 @@ $array=[1,2,3
 
 $r=ArrayOne::set($array)
     ->nav('products')
-    ->setCol('subtotal',function($col,$index) { return $col['price']*$col['quantity'];})
+    ->modCol('subtotal',function($col, $index) { return $col['price']*$col['quantity'];})
     ->filter(function($col,$index){ return $col['price']>=600; })
     ->removeCol(['price'])
     ->col('name')

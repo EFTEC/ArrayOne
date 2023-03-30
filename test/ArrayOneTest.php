@@ -2,7 +2,6 @@
 
 namespace eftec\tests;
 
-use DateTime;
 use eftec\ArrayOne;
 use Exception;
 use PHPUnit\Framework\TestCase;
@@ -39,6 +38,7 @@ class ArrayOneTest extends TestCase
                 ['idproduct' => 1, 'unitPrice' => 200, 'quantity' => 3],
                 ['idproduct' => 2, 'unitPrice' => 300, 'quantity' => 4],
                 ['idproduct' => 3, 'unitPrice' => 300, 'quantity' => 5],
+                5,
             ]
         ];
         $arr = ArrayOne::set($invoice)
@@ -47,66 +47,84 @@ class ArrayOneTest extends TestCase
             ->all();
         $this->assertEquals(['id' => 1, 'customer' => 10, 'detail' => ['unitPrice' => 800, 'quantity' => 12]], $arr);
     }
-    public function testJson():void
+
+    public function testJson(): void
     {
-        $json='{"a":3,"b":[1,2,3]}';
-        $this->assertEquals(['a'=>3,'b'=>[1,2,3]],ArrayOne::setJson($json)->all());
+        $json = '{"a":3,"b":[1,2,3]}';
+        $this->assertEquals(['a' => 3, 'b' => [1, 2, 3]], ArrayOne::setJson($json)->all());
     }
-    public function testValidateExample():void
+    public function testDuplicate(): void
+    {
+        $array=[
+            ['a'=>1,'b'=>2,'c'=>3],
+            ['a'=>2,'b'=>3,'c'=>3],
+            ['a'=>3,'b'=>4,'c'=>4],
+            ['a'=>4,'b'=>5,'c'=>4],
+            '333'
+        ];
+        $r=ArrayOne::set($array)->removeDuplicate('c')->all();
+        $result=array (
+            0 =>
+                array (
+                    'a' => 1,
+                    'b' => 2,
+                    'c' => 3,
+                ),
+            2 =>
+                array (
+                    'a' => 3,
+                    'b' => 4,
+                    'c' => 4,
+                ),
+            4 => '333',
+        );
+        $this->assertEquals($result,$r);
+
+    }
+
+    public function testValidateExample(): void
     {
         $invoice = [
             'id' => 1,
             'customer' => 'abc',
-            'null'=>null,
+            'null' => null,
             'table' => [
                 ['idproduct' => 1, 'unitPrice' => 200, 'quantity' => 'b'],
                 ['idproduct' => 2, 'unitPrice' => 300, 'quantity' => 'aaaaaaaaaaaaa'],
                 ['idproduct' => 3, 'unitPrice' => 300, 'quantity' => 'c'],
+                2,
             ],
             'nottable' => [
                 ['idproduct' => 1, 'unitPrice' => 200, 'quantity' => 3],
                 ['idproductx' => 2, 'unitPrice' => 300, 'quantity' => 4],
                 ['idproducty' => 3, 'unitPrice' => 300, 'quantity' => 5],
+                3,
             ],
         ];
-        $r=ArrayOne::getValidateArrayByExample($invoice);
-        $expected= [
+        $r = ArrayOne::makeValidateArrayByExample($invoice);
+        $expected = [
             'id' => 'int',
             'customer' => 'string',
-            'null'=>'nullable|string',
+            'null' => 'nullable|string',
             'table' =>
                 [
                     0 =>
-                        [
-                            'idproduct' => 'int',
-                            'unitPrice' => 'int',
-                            'quantity' => 'string',
-                        ],
+                        ['idproduct' => 'int', 'unitPrice' => 'int', 'quantity' => 'string',],
                 ],
             'nottable' =>
                 [
                     0 =>
-                        [
-                            'idproduct' => 'int',
-                            'unitPrice' => 'int',
-                            'quantity' => 'int',
-                        ],
+                        ['idproduct' => 'int', 'unitPrice' => 'int', 'quantity' => 'int',],
                     1 =>
-                        [
-                            'idproductx' => 'int',
-                            'unitPrice' => 'int',
-                            'quantity' => 'int',
-                        ],
+                        ['idproductx' => 'int', 'unitPrice' => 'int', 'quantity' => 'int',],
                     2 =>
-                        [
-                            'idproducty' => 'int',
-                            'unitPrice' => 'int',
-                            'quantity' => 'int',
-                        ],
+                        ['idproducty' => 'int', 'unitPrice' => 'int', 'quantity' => 'int',],
+                    3=>'int'
                 ],
         ];
-        $this->assertEquals($expected,$r);
+        $this->assertEquals($expected, $r);
     }
+
     public function testCsv(): void
     {
         $txt = "a,b,c,d\r\n1,\"aaa\",3,4\r\n5,\"bbb\",7,8";
@@ -118,7 +136,7 @@ class ArrayOneTest extends TestCase
         $this->assertEquals([
             ['a' => '1', 'b' => 'aaa', 'c' => '3', 'd' => '4'],
             ['a' => '5', 'b' => 'bbb', 'c' => '7', 'd' => '8']
-        ], ArrayOne::setCsvHeadLess($txt,['a','b','c','d'])->all());
+        ], ArrayOne::setCsvHeadLess($txt, ['a', 'b', 'c', 'd'])->all());
     }
 
     public function testRemoveRow(): void
@@ -128,6 +146,86 @@ class ArrayOneTest extends TestCase
         $this->assertEquals([0 => 'c', 1 => ['d1', 'd2'], 2 => 'e'], ArrayOne::set($array)->removeFirstRow(2, true)->all());
         $this->assertEquals(['t' => 'c', 'd' => ['d1', 'd2'], 0 => 'e'], ArrayOne::set($array)->removeFirstRow(2)->all());
         $this->assertEquals(['a', 'b', 't' => 'c'], ArrayOne::set($array)->removeLastRow(2)->all());
+    }
+
+    public function testRequest(): void
+    {
+        $_COOKIE['COOKIE1'] = 'my magic cookie';
+        $_SERVER['HTTP_USER_AGENT'] = 'TEST';
+        $_GET = ['id' => 'it is id get'];
+        $_POST = ['id2' => 'it is id2', 'id3' => 'it is id3', 'obj.obj1' => 'it is obj.obj1', 'obj.obj2' => 'it is obj.obj2',
+            'table1.col1' => [1, 2, 3],
+            'table1.col2' => [3, 4, 5],
+        ];
+        $r = ArrayOne::setRequest([
+            'id' => 'get',
+            'idmissing' => 'get;missing value',
+            'id2' => 'post',
+            'id3' => 'request',
+            'USER_AGENT' => 'header',
+            'COOKIE1' => 'cookie',
+            'body' => 'body',
+            'obj' => ['obj1' => 'post', 'obj2' => 'post'],
+            'table1' => [['col1' => 'post', 'col2' => 'post']],
+        ])->all();
+        $expected = [
+            'id' => 'it is id get',
+            'idmissing' => 'missing value',
+            'id2' => 'it is id2',
+            'id3' => 'it is id3',
+            'USER_AGENT' => 'TEST',
+            'COOKIE1' => 'my magic cookie',
+            'body' => NULL,
+            'obj' =>
+                [
+                    'obj1' => 'it is obj.obj1',
+                    'obj2' => 'it is obj.obj2',
+                ],
+            'table1' =>
+                [
+                    0 =>
+                        [
+                            'col1' => 1,
+                            'col2' => 3,
+                        ],
+                    1 =>
+                        [
+                            'col1' => 2,
+                            'col2' => 4,
+                        ],
+                    2 =>
+                        [
+                            'col1' => 3,
+                            'col2' => 5,
+                        ],
+                ],
+        ];
+        $this->assertEquals($expected, $r);
+    }
+
+    public function testmakeRequestArrayByExample(): void
+    {
+        $r = ArrayOne::makeRequestArrayByExample(
+            ['a' => 444,
+                'b' => 'xxx',
+                'c' => '22222222',
+                'value' => ['a' => 111, 'b' => 'c', 'c' => 'ddd'],
+                'table' => [['col1' => 122, 'col2' => 2], ['col1' => 133, 'col2' => 2],3],
+            ]);
+        $expected = [
+            'a' => 'POST',
+            'b' => 'POST',
+            'c' => 'POST',
+            'value' =>
+                ['a' => 'POST', 'b' =>'POST', 'c' => 'POST',],
+            'table' => [0 =>
+                        [
+                            'col1' => 'POST',
+                            'col2' => 'POST',
+                        ],
+                ],
+        ];
+        $this->assertEquals($expected, $r);
     }
 
     public function testLevel(): void
@@ -167,6 +265,7 @@ class ArrayOneTest extends TestCase
                 ['idproduct' => 1, 'unitPrice' => 200, 'quantity' => 3],
                 ['idproduct' => 2, 'unitPrice' => 300, 'quantity' => 4],
                 ['idproduct' => 3, 'unitPrice' => 300, 'quantity' => 5],
+                5,
             ]
         ];
         $mask = [
@@ -178,7 +277,7 @@ class ArrayOneTest extends TestCase
             'detail' => [
                 ['unitPrice' => 200, 'quantity' => 3],
                 ['unitPrice' => 300, 'quantity' => 4],
-                ['unitPrice' => 300, 'quantity' => 5],
+                ['unitPrice' => 300, 'quantity' => 5]
             ]
         ];
         $this->assertEquals($result, ArrayOne::set($invoice)->mask($mask)->all());
@@ -248,6 +347,7 @@ class ArrayOneTest extends TestCase
                 ['name' => 'cocacola1', 'price' => 500, 'quantity' => 200],
                 ['name' => 'cocacola2', 'price' => 600, 'quantity' => 300],
                 ['name' => 'cocacola3', 'price' => 700, 'quantity' => 400],
+                5
             ],
             'types' => ['type1', 'type2', 'type3']
         ];
@@ -290,6 +390,7 @@ class ArrayOneTest extends TestCase
                             'price' => NULL,
                             'quantity' => NULL,
                         ],
+                    3=>null
                 ],
             'types' =>
                 [
@@ -312,7 +413,7 @@ class ArrayOneTest extends TestCase
         ];
         $r = ArrayOne::set($array)
             ->nav('products')
-            ->setCol('name', function($col, $index) {
+            ->modCol('name', function($col, $index) {
                 return strtoupper($col['name']);
             })
             ->all();
@@ -458,7 +559,7 @@ class ArrayOneTest extends TestCase
         ];
         $r = ArrayOne::set($array)
             ->nav('products')
-            ->setCol('subtotal', function($col, $index) {
+            ->modCol('subtotal', function($col, $index) {
                 return $col['price'] * $col['quantity'];
             })
             ->filter(function($col, $index) {
@@ -494,12 +595,13 @@ class ArrayOneTest extends TestCase
         }, false)->current();
         $this->assertEquals([1 => ['id' => 2, 'name' => 'argentina']], $r);
     }
+
     public function testfilter2(): void
     {
         $array = [['id' => 1, 'name' => 'chile'], ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']];
-        $r = ArrayOne::set($array)->filter(['id'=>'eq;2'], true)->current();
+        $r = ArrayOne::set($array)->filter(['id' => 'eq;2'], true)->current();
         $this->assertEquals(['id' => 2, 'name' => 'argentina'], $r);
-        $r = ArrayOne::set($array)->filter(['id'=>'gte;2'])->current();
+        $r = ArrayOne::set($array)->filter(['id' => 'gte;2'])->current();
         $this->assertEquals([1 => ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']], $r);
     }
 
