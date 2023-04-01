@@ -3,6 +3,7 @@
 namespace eftec;
 
 use Closure;
+use Exception;
 use RuntimeException;
 
 /**
@@ -527,7 +528,9 @@ class ArrayOne
         return $this;
     }
 
-    /** @noinspection TypeUnsafeArraySearchInspection */
+    /** @noinspection TypeUnsafeArraySearchInspection
+     * @noinspection TypeUnsafeComparisonInspection
+     */
     private function runCondition($r, $compareValue, $compareType, bool &$fail, ?string &$genMsg): void
     {
         if (strpos($compareType, 'f:') === 0) {
@@ -538,184 +541,189 @@ class ArrayOne
             $fail = !$this->serviceObject->$namefunction($r, $compareValue, $genMsg);
             return;
         }
+        if (strpos($compareType, 'not') === 0) {
+            $negation = true;
+            $compareType=substr($compareType,3);
+        } else {
+            $negation = false;
+        }
         switch ($compareType) {
             case 'contain':
             case 'like':
-                if (strpos((string)$r, $compareValue) === false) {
+                if ((strpos((string)$r, $compareValue)!==false) === $negation) {
                     $fail = true;
-                    $genMsg = '%field contains %comp';
-                }
-                break;
-            case 'notcontain':
-                if (strpos((string)$r, $compareValue) !== false) {
-                    $fail = true;
-                    $genMsg = '%field does not contain %comp';
+                    $genMsg = $negation ? '%field does not contains %comp' : '%field contains %comp';
                 }
                 break;
             case 'alpha':
-                if (!ctype_alpha($r)) {
+                if (ctype_alpha($r) === $negation) {
                     $fail = true;
-                    $genMsg = '%field is not alphabetic';
+                    $genMsg = $negation ? '%field is alphabetic' : '%field is not alphabetic';
                 }
                 break;
             case 'alphanumunder':
-                if (!ctype_alnum(str_replace('_', '', (string)$r))) {
+                if (ctype_alnum(str_replace('_', '', (string)$r)) === $negation) {
                     $fail = true;
-                    $genMsg = '%field is not alphanumeric with underscore';
+                    $genMsg = $negation ?
+                        '%field is alphanumeric with underscore' :
+                        '%field is not alphanumeric with underscore';
                 }
                 break;
             case 'alphanum':
                 //
-                if (!ctype_alnum($r)) {
+                if (ctype_alnum($r) === $negation) {
                     $fail = true;
-                    $genMsg = '%field is not alphanumeric';
+                    $genMsg = $negation ? '%field is alphanumeric' : '%field is not alphanumeric';
                 }
                 break;
             case 'text':
                 // words, number, accents, spaces, and other characters
-                /** @noinspection NotOptimalRegularExpressionsInspection */
-                if (!preg_match('^[\p{L}| |.|\/|*|+|.|,|=|_|"|\']+$', (string)$r)) {
+                try {
+                    $r = (string)$r;
+                } catch(Exception $ex){
+                    $r='!';
+                }
+
+                if (preg_match('/^[\pL\pM\p{Zs}.-]+$/u', (string)$r) == $negation) {
                     $fail = true;
-                    $genMsg = '%field has characters not allowed';
+                    $genMsg = $negation ?
+                        '%field hasn\'t characters not allowed' :
+                        '%field has characters not allowed';
                 }
                 break;
             case 'regexp':
-                if (!preg_match($compareValue, (string)$r)) {
+                if (preg_match($compareValue, (string)$r) == $negation) {
                     $fail = true;
-                    $genMsg = '%field is not allowed';
+                    $genMsg = $negation ? '%field does match exp' : '%field does not match exp';
                 }
                 break;
             case 'email':
-                if (!filter_var($r, FILTER_VALIDATE_EMAIL)) {
+                if (filter_var($r, FILTER_VALIDATE_EMAIL) == $negation) {
                     $fail = true;
-                    $genMsg = '%field is not an email';
+                    $genMsg = $negation ? '%field is an email' : '%field is not an email';
                 }
                 break;
             case 'url':
-                if (!filter_var($r, FILTER_VALIDATE_URL)) {
+                if (filter_var($r, FILTER_VALIDATE_URL) == $negation) {
                     $fail = true;
-                    $genMsg = '%field is not an url';
+                    $genMsg = $negation ? '%field is an url' : '%field is not an url';
                 }
                 break;
             case 'domain':
-                if (!filter_var($r, FILTER_VALIDATE_DOMAIN)) {
+                if (filter_var($r, FILTER_VALIDATE_DOMAIN) == $negation) {
                     $fail = true;
-                    $genMsg = '%field is not a domain';
+                    $genMsg = $negation ? '%field is a domain' : '%field is not a domain';
                 }
                 break;
             case 'minlen':
                 $l = is_array($r) ? count($r) : strlen((string)$r);
-                if ($l < $compareValue) {
+                if (($l < $compareValue) !== $negation) {
                     $fail = true;
-                    $genMsg = '%field size is less than %comp';
+                    $genMsg = $negation ? '%field size is not less than %comp' : '%field size is less than %comp';
                 }
                 break;
             case 'maxlen':
                 $l = is_array($r) ? count($r) : strlen((string)$r);
-                if ($l > $compareValue) {
+                if (($l > $compareValue) !== $negation) {
                     $fail = true;
-                    $genMsg = '%field size is great than %comp';
+                    $genMsg = $negation ? '%field size is not great than %comp' : '%field size is great than %comp';
                 }
                 break;
             case 'betweenlen':
                 $rl = is_array($r) ? count($r) : strlen((string)$r);
-                if ($rl < $compareValue[0] || $rl > $compareValue[1]) {
+                if (($rl < $compareValue[0] || $rl > $compareValue[1]) !== $negation) {
                     $fail = true;
-                    $genMsg = '%field size is not between %first and %second ';
+                    $genMsg = $negation ? '%field size is between %first and %second' : '%field size is not between %first and %second';
                 }
                 break;
             case 'exist':
-                if (!isset($r)) { // file uses a different method
+                if (isset($r) === $negation) { // file uses a different method
                     $fail = true;
-                    $genMsg = '%field does not exist';
+                    $genMsg = $negation ? '%field does exist' : '%field does not exist';
                 }
                 break;
             case 'missing':
             case 'notexist':
-                if (isset($r)) { // file uses a different method
+                if (isset($r) !== $negation) { // file uses a different method
                     $fail = true;
-                    $genMsg = '%field exists';
+                    $genMsg = $negation ? '%field does not exist' : '%field exists';
                 }
                 break;
             case 'req':
             case 'required':
-                if (!$r) {
+                if ((!$r) !== $negation) {
                     $fail = true;
-                    $genMsg = '%field is required';
+                    $genMsg = $negation ? '%field is not required' : '%field is required';
                 }
                 break;
             case 'eq':
             case '==':
                 if (is_array($compareValue)) {
                     /** @noinspection TypeUnsafeArraySearchInspection */
-                    if (!in_array($r, $compareValue)) {
+                    if (in_array($r, $compareValue) === $negation) {
                         $fail = true;
-                        $genMsg = '%field is not equals than %comp';
+                        $genMsg = $negation ? '%field is equals than %comp' : '%field is not equals than %comp';
                     }
-                } /** @noinspection TypeUnsafeComparisonInspection */ elseif ($r != $compareValue) {
+                } /** @noinspection TypeUnsafeComparisonInspection */ elseif (($r == $compareValue) === $negation) {
                     $fail = true;
-                    $genMsg = '%field is not equals than %comp';
+                    $genMsg = $negation ? '%field is equals than %comp' : '%field is not equals than %comp';
                 }
                 break;
             case 'ne':
             case '!=':
             case '<>':
                 if (is_array($compareValue)) {
-                    if (in_array($r, $compareValue)) {
+                    if (in_array($r, $compareValue) !== $negation) {
                         $fail = true;
-                        $genMsg = '%field is in %comp';
+                        $genMsg = $negation ? '%field is not in %comp' : '%field is in %comp';
                     }
-                } /** @noinspection TypeUnsafeComparisonInspection */ elseif ($r == $compareValue) {
+                } /** @noinspection TypeUnsafeComparisonInspection */ elseif (($r == $compareValue) != $negation) {
                     $fail = true;
-                    $genMsg = '%field is equals than %comp';
+                    $genMsg = $negation ? '%field is not equals than %comp' : '%field is equals than %comp';
                 }
                 break;
             case 'null':
-                if ($r !== null) {
+                if (($r !== null) !== $negation) {
                     $fail = true;
-                    $genMsg = '%field is not null';
+                    $genMsg = $negation ? '%field is null' : '%field is not null';
                 }
                 break;
             case 'empty':
-                if (!empty($r)) {
+                if (empty($r) === $negation) {
                     $fail = true;
-                    $genMsg = '%field is not empty';
-                }
-                break;
-            case 'notempty':
-                if (empty($r)) {
-                    $fail = true;
-                    $genMsg = '%field is empty';
-                }
-                break;
-            case 'notnull':
-                if ($r === null) {
-                    $fail = true;
-                    $genMsg = '%field is null';
+                    $genMsg = $negation ? '%field is empty' : '%field is not empty';
                 }
                 break;
             case 'lt':
-                if ($r >= $compareValue) {
+                if (($r >= $compareValue) !== $negation) {
                     $fail = true;
-                    $genMsg = '%field is great or equal than %comp';
+                    $genMsg = $negation ?
+                        '%field is not great or equal than %comp' :
+                        '%field is great or equal than %comp';
                 }
                 break;
             case 'lte':
-                if ($r > $compareValue) {
+                if (($r > $compareValue) !== $negation) {
                     $fail = true;
-                    $genMsg = '%field is great than %comp';
+                    $genMsg = $negation ?
+                        '%field is not great than %comp' :
+                        '%field is great than %comp';
                 }
                 break;
             case 'gt':
-                if ($r <= $compareValue) {
+                if (($r <= $compareValue) !==$negation) {
                     $fail = true;
-                    $genMsg = '%field is less or equal than %comp';
+                    $genMsg = $negation ?
+                        '%field is not less or equal than %comp' :
+                        '%field is less or equal than %comp';
                 }
                 break;
             case 'gte':
-                if ($r < $compareValue) {
+                if (($r < $compareValue)!==$negation) {
                     $fail = true;
-                    $genMsg = '%field is less than %comp';
+                    $genMsg = $negation ?
+                        '%field is not less than %comp' :
+                        '%field is less than %comp';
                 }
                 break;
             case 'between':
@@ -723,51 +731,51 @@ class ArrayOne
                 if (!isset($compareValue[0], $compareValue[1])) {
                     $fail = true;
                     $genMsg = '%field (between) lacks conditions';
-                } else if ($rl < $compareValue[0] || $rl > $compareValue[1]) {
+                } else if (($rl < $compareValue[0] || $rl > $compareValue[1]) !==$negation) {
                     $fail = true;
                     $genMsg = '%field is not between ' . $compareValue[0] . " and " . $compareValue[1];
                 }
                 break;
             case 'true':
-                if ($r === true || $r === 1 || $r === '1') {
+                if (($r === true || $r === 1 || $r === '1')===$negation) {
                     $fail = true;
-                    $genMsg = '%field is not true';
+                    $genMsg = $negation ?  '%field is  true' : '%field is not true';
                 }
                 break;
             case 'false':
-                if ($r === false || $r === 0 || $r === '0') {
+                if (($r === false || $r === 0 || $r === '0')===$negation) {
                     $fail = true;
-                    $genMsg = '%field is not false';
+                    $genMsg = $negation ? '%field is false' : '%field is not false';
                 }
                 break;
             case 'array':
-                if (!is_array($r)) {
+                if (is_array($r)===$negation) {
                     $fail = true;
-                    $genMsg = '%field is not an array';
+                    $genMsg = $negation ? '%field is an array' : '%field is not an array';
                 }
                 break;
             case 'int':
-                if (!is_int($r)) {
+                if (is_int($r)===$negation) {
                     $fail = true;
-                    $genMsg = '%field is not an integer';
+                    $genMsg = $negation ? '%field is an integer': '%field is not an integer';
                 }
                 break;
             case 'string':
-                if (!is_string($r)) {
+                if (is_string($r)===$negation) {
                     $fail = true;
-                    $genMsg = '%field is not a string';
+                    $genMsg = $negation ?  '%field is a string' :  '%field is not a string';
                 }
                 break;
             case 'float':
-                if (!is_float($r)) {
+                if (is_float($r)===$negation) {
                     $fail = true;
-                    $genMsg = '%field is not a float';
+                    $genMsg = $negation ? '%field is a float' : '%field is not a float';
                 }
                 break;
             case 'object':
-                if (!is_object($r)) {
+                if (is_object($r)===$negation) {
                     $fail = true;
-                    $genMsg = '%field is not an object';
+                    $genMsg =$negation ?  '%field is an object' : '%field is not an object';
                 }
                 break;
             case 'in':
@@ -775,19 +783,9 @@ class ArrayOne
                     $fail = true;
                     $genMsg = '%field has no values to compare';
                 }
-                if (!in_array($r, $compareValue)) {
+                if (in_array($r, $compareValue)===$negation) {
                     $fail = true;
-                    $genMsg = '%field is not in list';
-                }
-                break;
-            case 'notin':
-                if (!is_array($compareValue)) {
-                    $fail = true;
-                    $genMsg = '%field has no values to compare';
-                }
-                if (in_array($r, $compareValue)) {
-                    $fail = true;
-                    $genMsg = '%field should not be in list';
+                    $genMsg = $negation ? '%field is in list' : '%field is not in list';
                 }
                 break;
             default:
@@ -1367,10 +1365,11 @@ class ArrayOne
      *     ]);
      * </pre>
      * @param array $comparisonTable <br/>
+     *                               <b>not-valid-</b> : negates an validation, example "notint"<br/>
      *                               <b>nullable</b> :the value can be a null. If the value is null, then it ignores
      *                               other validations<br/>
+     *                               <b>f:-function-</b> :call a custom function defined in the service class<br/>
      *                               <b>contain like</b> :if a text is contained in<br/>
-     *                               <b>notcontain</b> :if a text is not contained in<br/>
      *                               <b>alpha</b> :if the value is alphabetic<br/>
      *                               <b>alphanumunder</b> :if the value is alphanumeric or undercase<br/>
      *                               <b>alphanum</b> :if the value is alphanumeric<br/>
@@ -1389,7 +1388,6 @@ class ArrayOne
      *                               <b>ne != <></b> :if the value is not equals to<br/>
      *                               <b>null</b> :if the value is null<br/>
      *                               <b>empty</b> :if the value is empty<br/>
-     *                               <b>notnull</b> :if the value is not null<br/>
      *                               <b>lt</b> :if the value is less than<br/>
      *                               <b>lte</b> :if the value is less or equals than<br/>
      *                               <b>gt</b> :if the value is great than<br/>

@@ -63,7 +63,7 @@ What it does? Filter, order, renaming column, grouping, validating, amongst many
     * [makeRequestArrayByExample](#makerequestarraybyexample)
   * [versions](#versions)
   * [License](#license)
-<!-- TOC -->
+  <!-- TOC -->
 
 ## Basic examples
 
@@ -485,52 +485,48 @@ ValidateOne
 ```
 
 * **parameter** array $comparisonTable   The comparison table, is an associative table with the conditions to compare using the next syntax: [index=>"condition|condition2..."].
-  * The conditions could be express as:  \<name of the condition>;\<value>\<custom error message>
+  * The conditions could be express as:  **\<name of the condition>**;**\<value>**;**\<custom error message>**
+    * If the **\<condition>** starts with "not", then it is negated, example: "notalpha"
     * The **\<value>** could be a simple literal (1,hello, etc.) or a list of values (separated by comma)
     * The **\<custom error message>** could contain the next variables: **%field** the id of the field, %value the current value of the field, **%comp** the value to compare, **%first** the first value to compare, **%second** the second value to compare, example "**%field** (%value) is not equals to **%comp**", **%rowid** is the id of the current row (if any)
 
-
-| Name              | Description                                                                                         | syntax                       |
-|-------------------|-----------------------------------------------------------------------------------------------------|------------------------------|
-| nullable          | the value can be a null. **If the value is null, then it ignores other validations**                | nullable                     |
-| f:\<namefunction> | It calls a **custom function** defined in the service class. See example                            | f:myfunction                 |
-| contain like      | if a text is contained in                                                                           | contain;\<text>              |
-| notcontain        | if a text is not contained in                                                                       | notcontain;\<text>           |
-| alpha             | if the value is alphabetic                                                                          | alpha                        |
-| alphanumunder     | if the value is alphanumeric or under-case                                                          | alphanumunder                |
-| alphanum          | if the value is alphanumeric                                                                        | alphanum                     |
-| text              | if the value is a text                                                                              | text                         |
-| regexp            | if the value match a regular expression. You can't use comma in the regular expression.             | regexp;\<regular expression> |
-| email             | if the value is an email                                                                            | email                        |
-| url               | if the value is an url                                                                              | url                          |
-| domain            | if the value is a domain                                                                            | domain                       |
-| minlen            | the value must have a minimum length                                                                | minlen;\<size>               |
-| maxlen            | the value must have a maximum lenght                                                                | maxlen;\<size>               |
-| betweenlen        | if the value has a size between                                                                     | betweenlen;<sizemin,sizemax> |
-| exist             | if the value exists                                                                                 | exist                        |
-| missing,notexist  | if the value not exist                                                                              | missing\                     |notexist            |
-| req,required      | if the value is required                                                                            | req\                         |required                |
-| eq ==             | if the value is equals to                                                                           | eq;\<value to compare>       |
-| ne != <>          | if the value is not equals to                                                                       | nq;\<value to compare>       |
-| null              | The value must be null. It is different to **nullable** because **nullable** allow other conditions | null                         |
-| empty             | if the value is empty                                                                               | empty                        |
-| notnull           | if the value is not null                                                                            | notnull                      |
-| lt                | if the value is less than                                                                           | lt;\<value to compare>       |
-| lte               | if the value is less or equals than                                                                 | lte;\<value to compare>      |
-| gt                | if the value is great than                                                                          | gt;\<value to compare>       |
-| gte               | if the value is great or equals than                                                                | gte;\<value to compare>      |
-| between           | if the value is between                                                                             | between;\<from,to>           |
-| true              | if the value is true or 1                                                                           | true                         |
-| false             | if the value is false, or 0                                                                         | false                        |
-| array             | if the value is an array                                                                            | array                        |
-| int               | if the value is an integer                                                                          | int                          |
-| string            | if the value is a string                                                                            | string                       |
-| float             | if the value is a float                                                                             | float                        |
-| object            | if the value is an object                                                                           | object                       |
-| in                | the value must be in a list                                                                         | in;apple,pear,banana         |
-| notin             | the value must not be in a list                                                                     | notin;apple,pear,banana      |
-
-
+| condition             | description                                                                                      | example work       | example fail  | expression     |
+|-----------------------|--------------------------------------------------------------------------------------------------|--------------------|---------------|----------------|
+| not**\<condition>**   | negates any comparison, excepting nullable and custom functions. Example: "notint"               | "hello"            | 20            | notint         |
+| nullable              | the value **CAN** be a null. **If the value is null, then it ignores other validations**         | null               |               | nullable       |
+| f:**\<namefunction>** | It calls a **custom function** defined in the service class. See example                         | "hello"            |               | f:test         |
+| contain like          | if a text is contained in                                                                        | "helloworld"       | "hello"       | contain;world  |
+| alpha                 | if the value is alphabetic                                                                       | "hello"            | "hello33"     | alpha          |
+| alphanumunder         | if the value is alphanumeric or  under-case                                                      | "hello_33"         | "hello!33"    | alphanumunder  |
+| alphanum              | if the value is alphanumeric                                                                     | "hello33"          | "hello!33"    | alphanum       |
+| text                  | if the value is a text                                                                           | "hello"            | true          | text           |
+| regexp                | if the value match a regular expression. You  can't use comma in the regular expression.         | "abc123"           | "xyz123"      | regexp;/abc*/  |
+| email                 | if the value is an email                                                                         | "aaa@bbb.com"      | "aaa.bbb.com" | email          |
+| url                   | if the value is an url                                                                           | https://www.nic.cl | "aaaa"        | url            |
+| domain                | if the value is a domain                                                                         | www.nic.cl         | "….."         | domain         |
+| minlen                | the value must have a minimum length                                                             | "hello"            | "h"           | minlen;3       |
+| maxlen                | the value must have a maximum lenght                                                             | "h"                | "hello"       | maxlen;3       |
+| betweenlen            | if the value has a size between                                                                  | "hello"            | "h"           | betweenlen;4,5 |
+| exist                 | if the value exists                                                                              | "hi"               | null          | exist          |
+| missing               | if the value not exist                                                                           | null               | "hi"          | missing        |
+| req,required          | if the value is required                                                                         | "hi"               | null          | req,required   |
+| eq ==                 | if the value is equals to                                                                        | 1                  | 0             | eq;1           |
+| ne != <>              | if the value is not equals to                                                                    | 1                  | 0             | ne;0           |
+| null                  | The value **MUST** be null. It is different to  **nullable** because **nullable** is a "**CAN**" | null               | "hello"       | null           |
+| empty                 | if the value is empty                                                                            | ""                 | "hello"       | empty          |
+| lt                    | if the value is less than                                                                        | 1                  | 10            | lt;5           |
+| lte                   | if the value is less or equals than                                                              | 1                  | 10            | lte;5          |
+| gt                    | if the value is great than                                                                       | 10                 | 1             | gt;5           |
+| gte                   | if the value is great or equals than                                                             | 10                 | 1             | gte;5          |
+| between               | if the value is between                                                                          | 5                  | 0             | between;4,5    |
+| true                  | if the value is true or 1                                                                        | true               | false         | true           |
+| false                 | if the value is false, or 0                                                                      | false              | true          | false          |
+| array                 | if the value is an array                                                                         | [1,2,3]            | 1             | array          |
+| int                   | if the value is an integer                                                                       | 1                  | "hello"       | int            |
+| string                | if the value is a string                                                                         | "hello"            | true          | string         |
+| float                 | if the value is a float                                                                          | 333.3              | "hello"       | float          |
+| object                | if the value is an object                                                                        | new  stdClass()    | 1             | object         |
+| in                    | the value must be in a list                                                                      | "a"                | "x"           | in;a,b,c       |
 
 * **parameter** bool  $extraFieldError if true and the current array has more values than comparison table, then
   it returns an error.
@@ -578,6 +574,8 @@ $this->makeRequestArrayByExample(['a'=1,'b'=>2]); // ['a'='post','b'=>'post'];
 
 
 ## versions
+* 1.3 2023-03-31
+  * validation now allow negation ("not" prefix). 
 * 1.2 
   * renamed method getValidateArrayByExample() to makeValidateArrayByExample()
   * new method makeRequestArrayByExample()
