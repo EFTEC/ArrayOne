@@ -13,7 +13,7 @@ use RuntimeException;
  */
 class ArrayOne
 {
-    public const VERSION = "1.2";
+    public const VERSION = "1.4";
     /** @var array|null */
     protected $array;
     protected $serviceObject;
@@ -482,7 +482,7 @@ class ArrayOne
                     $fragment = explode(';', $vpart, 3);
                     $type = $fragment[0];
                     $compValue = $fragment[1] ?? null;
-                    if (strpos($compValue, ',') !== false) {
+                    if ($compValue!==null && strpos($compValue, ',') !== false) {
                         $compValue = explode(',', $compValue);
                     }
                     $msg = '';
@@ -999,9 +999,12 @@ class ArrayOne
      * <b>Example:</b><br/>
      * <pre>
      * $this->group('type',['amount'=>'sum','price'=>'sum']);
+     * $this->group('type',['newcol'=>'sum(amount)','price'=>'sum(price)']);
      * </pre>
      * @param mixed $column              the column to group.
-     * @param array $functionAggregation An associative array ['colname'=>'aggregation'] with the aggregations<br/>
+     * @param array $functionAggregation An associative array ['col-to-agregate'=>'aggregation']<br/>
+     *                                   or ['new-col'=>'aggregation(col-to-agregate)']<br/>
+     *                                   <b>stack</b>: It stack the rows grouped by the column<br/>
      *                                   <b>count</b>: Count<br/>
      *                                   <b>avg</b>: Average<br/>
      *                                   <b>min</b>: Minimum<br/>
@@ -1018,6 +1021,16 @@ class ArrayOne
             return $this;
         }
         $groups = [];
+        $preFunction=[];
+        foreach ($functionAggregation as $colName => $fun) {
+            $fnPart = explode('(', rtrim($fun,')'), 2);
+            if (count($fnPart) === 2) { // col1=>sum(col2);
+                [$fun, $colOld] = $fnPart;
+            } else { // col1=>sum
+                $colOld = $colName;
+            }
+            $preFunction[]=[$colName,$colOld,$fun];
+        }
         foreach ($this->currentArray as $row) {
             if (array_key_exists($row[$column], $groups)) {
                 $initial = $groups[$row[$column]];
@@ -1025,38 +1038,47 @@ class ArrayOne
             } else {
                 $initial = ['__count' => 1];
             }
-            foreach ($functionAggregation as $col => $fun) {
+            foreach ($preFunction as $pf) {
+                [$colName,$colOld,$fun]=$pf;
                 switch ($fun) {
+                    case 'stack':
+                        $initial[$colName][]=$row;
+                        break;
                     case 'first':
-                        if (!array_key_exists($col, $initial)) {
-                            $initial[$col] = $row[$col];
+                        if (!array_key_exists($colOld, $initial)) {
+                            $initial[$colName] = $row[$colOld];
                         }
                         break;
                     case 'last':
-                        $initial[$col] = $row[$col];
+                        $initial[$colName] = $row[$colOld];
+                        break;
+                    case 'count':
+                        $preFunction[]=[$colName,$colOld,$fun];
                         break;
                     case 'avg':
                     case 'sum':
-                        $initial[$col] = $row[$col] + ($initial[$col] ?? null);
+                        $initial[$colName] = $row[$colOld] + ($initial[$colName] ?? null);
                         break;
                     case 'min':
-                        $initial[$col] = min($row[$col], $initial[$col] ?? PHP_INT_MAX);
+                        $initial[$colName] = min($row[$colOld], $initial[$colName] ?? PHP_INT_MAX);
                         break;
                     case 'max':
-                        $initial[$col] = max($row[$col], $initial[$col] ?? null);
+                        $initial[$colName] = max($row[$colOld], $initial[$colName] ?? null);
                         break;
                 }
             }
             $groups[$row[$column]] = $initial;
         }
         foreach ($groups as $k => $v) {
-            foreach ($functionAggregation as $col => $fun) {
+            foreach ($preFunction as $pf) {
+                /** @noinspection PhpUnusedLocalVariableInspection */
+                [$colName,$colOld,$fun]=$pf;
                 switch ($fun) {
                     case 'avg':
-                        $groups[$k][$col] /= $groups[$k]['__count'];
+                        $groups[$k][$colName] /= $groups[$k]['__count'];
                         break;
                     case 'count':
-                        $groups[$k][$col] = $groups[$k]['__count'];
+                        $groups[$k][$colName] = $groups[$k]['__count'];
                         break;
                 }
             }

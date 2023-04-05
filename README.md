@@ -252,9 +252,12 @@ It groups one column and return its column grouped and values aggregated
 **Example:**
 ```php
 $this->group('type',['amount'=>'sum','price'=>'sum']);
+$this->group('type',['newcol'=>'sum(amount)','price'=>'sum(price)']);
 ```
 * **parameter** mixed $column the column to group.
-* **parameter** array $functionAggregation An associative array ['colname'=>'aggregation'] with the aggregations   
+* **parameter** array $functionAggregation An associative array ['col-to-agregate'=>'aggregation']  
+  or ['new-col'=>'aggregation(col-to-agregate)']   
+  <b>stack</b>: It stack the rows grouped by the column (like a pivot table).  
   <b>count</b>: Count   
   <b>avg</b>: Average   
   <b>min</b>: Minimum   
@@ -574,6 +577,10 @@ $this->makeRequestArrayByExample(['a'=1,'b'=>2]); // ['a'='post','b'=>'post'];
 
 
 ## versions
+* 1.4 2023-04-05
+  * [fix] filtercondition() fixed a warning when the value is null.
+  * [new] group() now allow to stack elements
+  * [new] group() now allow to specify a new column
 * 1.3 2023-03-31
   * validation now allow negation ("not" prefix). 
 * 1.2 

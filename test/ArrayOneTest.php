@@ -214,15 +214,15 @@ class ArrayOneTest extends TestCase
                 'table' => [['col1' => 122, 'col2' => 2], ['col1' => 133, 'col2' => 2],3],
             ]);
         $expected = [
-            'a' => 'POST',
-            'b' => 'POST',
-            'c' => 'POST',
+            'a' => 'post',
+            'b' => 'post',
+            'c' => 'post',
             'value' =>
-                ['a' => 'POST', 'b' =>'POST', 'c' => 'POST',],
+                ['a' => 'post', 'b' =>'post', 'c' => 'post',],
             'table' => [0 =>
                         [
-                            'col1' => 'POST',
-                            'col2' => 'POST',
+                            'col1' => 'post',
+                            'col2' => 'post',
                         ],
                 ],
         ];
@@ -331,7 +331,7 @@ class ArrayOneTest extends TestCase
             'fservicefunction' => 'custommsg',
             'fin' => NULL,
             'fin2' => 'fin2 is not in list',
-            'fnotin' => 'fnotin should not be in list',
+            'fnotin' => 'fnotin is in list',
         ];
         $service = new ServiceClass();
         $run = ArrayOne::set($array, ServiceClass::class)->validate($validate, true)->all();
@@ -464,7 +464,8 @@ class ArrayOneTest extends TestCase
         ];
         $result = ArrayOne::set($array)
             ->group('cat', [
-                'col_min' => 'min',
+                'col_stack' => 'stack(cat)',
+                'col_min2' => 'min(col_min)',
                 'col_max' => 'max',
                 'col_sum' => 'sum',
                 'col_avg' => 'avg',
@@ -475,11 +476,17 @@ class ArrayOneTest extends TestCase
             ->all();
         $expected = [
             'cat1' =>
-                ['col_min' => 1, 'col_max' => 4, 'col_sum' => 5, 'col_avg' => 2.5, 'col_first' => 'john1', 'col_last' => 'doe4', 'col_count' => 2,],
+                ['col_min2' => 1, 'col_max' => 4, 'col_sum' => 5, 'col_avg' => 2.5, 'col_first' => 'john1', 'col_last' => 'doe4', 'col_count' => 2,
+                    'col_stack'=>[
+                        ['cat' => 'cat1', 'col_min' => 1, 'col_max' => 1, 'col_sum' => 1, 'col_avg' => 1, 'col_first' => 'john1', 'col_last' => 'doe1']
+                        ,['cat' => 'cat1', 'col_min' => 4, 'col_max' => 4, 'col_sum' => 4, 'col_avg' => 4, 'col_first' => 'john4', 'col_last' => 'doe4'],]],
             'cat2' =>
-                ['col_min' => 2, 'col_max' => 5, 'col_sum' => 7, 'col_avg' => 3.5, 'col_first' => 'john2', 'col_last' => 'doe5', 'col_count' => 2,],
+                ['col_min2' => 2, 'col_max' => 5, 'col_sum' => 7, 'col_avg' => 3.5, 'col_first' => 'john2', 'col_last' => 'doe5', 'col_count' => 2,
+                    'col_stack'=>[['cat' => 'cat2', 'col_min' => 2, 'col_max' => 2, 'col_sum' => 2, 'col_avg' => 2, 'col_first' => 'john2', 'col_last' => 'doe2'],
+                        ['cat' => 'cat2', 'col_min' => 5, 'col_max' => 5, 'col_sum' => 5, 'col_avg' => 5, 'col_first' => 'john5', 'col_last' => 'doe5']]],
             'cat3' =>
-                ['col_min' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3', 'col_count' => 1,],
+                ['col_min2' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3', 'col_count' => 1,
+                    'col_stack'=>[['cat' => 'cat3', 'col_min' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3'],]],
         ];
         $this->assertEquals($expected, $result);
     }
