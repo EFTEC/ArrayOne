@@ -13,7 +13,7 @@ use RuntimeException;
  */
 class ArrayOne
 {
-    public const VERSION = "1.4";
+    public const VERSION = "1.5";
     /** @var array|null */
     protected $array;
     protected $serviceObject;
@@ -426,17 +426,23 @@ class ArrayOne
 
     /**
      * It filters the values. If the condition is false, then the row is deleted. It uses array_filter()<br/>
-     * The indexes are not rebuilt.
+     * The indexes are not rebuilt.<br>
      * <b>Example:</b><br/>
      * <pre>
      * $array = [['id' => 1, 'name' => 'chile'], ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']];
-     * // ['id' => 2, 'name' => 'argentina']
+     * // get the row #2 "argentina":
+     * // using a function:
      * $r = ArrayOne::set($array)->filter(function($row, $id) {return $row['id'] === 2;}, true)->result();
-     * // [1=>['id' => 2, 'name' => 'argentina']]
+     * // using a function a returning a flat result:
      * $r = ArrayOne::set($array)->filter(function($row, $id) {return $row['id'] === 2;}, false)->result();
+     * // using an associative array:
+     * $r = ArrayOne::set($array)->filter(['id'=>'eq;2'], false)->result();
+     * // using an associative array that contains an array:
+     * $r = ArrayOne::set($array)->filter(['id'=>['eq,2], false)->result();
      * </pre>
      * @param callable|null|array $condition you can use a callable function ($row,$id)<br/>
-     *                                       or a comparison array ['id'=>'eq;2']
+     *                                       or a comparison array ['id'=>'eq;2|lt;3'] "|" adds more comparisons<br>
+     *                                       or a comparison array ['id'=>[['eq',2],['lt',3]]<br>
      * @param bool                $flat
      * @return $this
      * @see ArrayOne::validate to see the definition of comparison array
@@ -463,9 +469,11 @@ class ArrayOne
     }
 
     /**
+     * It is used internally to filter rows unsing a specific condition
      * @param mixed $row
      * @param mixed $index
-     * @param array $condition
+     * @param array $condition as text:['col'=>'eq;2']<br/>
+     *                         as array:['col'=>['eq',2]]</br>
      * @return bool
      * @noinspection PhpUnusedParameterInspection
      */
@@ -477,18 +485,35 @@ class ArrayOne
         $fail = false;
         foreach ($row as $k => $r) {
             if (isset($condition[$k])) {
-                $vparts = explode('|', $condition[$k]);
-                foreach ($vparts as $vpart) {
-                    $fragment = explode(';', $vpart, 3);
-                    $type = $fragment[0];
-                    $compValue = $fragment[1] ?? null;
-                    if ($compValue!==null && strpos($compValue, ',') !== false) {
-                        $compValue = explode(',', $compValue);
+                if(is_array($condition[$k])) {
+                    if(is_array($condition[$k][0])) {
+                        $conds= $condition[$k]; // [['eq',2],['eq',3]]
+                    } else {
+                        $conds=[$condition[$k]]; // // ['eq',2] =>[['eq',2']]
                     }
-                    $msg = '';
-                    $this->runCondition($r, $compValue, $type, $fail, $msg);
-                    if ($fail) {
-                        break 2;
+                    foreach($conds as $cond) {
+                        $compValue = $cond[1] ?? null;
+                        $type = $cond[0] ?? '';
+                        $msg = '';
+                        $this->runCondition($r, $compValue, $type, $fail, $msg);
+                        if ($fail) {
+                            break 2;
+                        }
+                    }
+                } else {
+                    $vparts = explode('|', $condition[$k]);
+                    foreach ($vparts as $vpart) {
+                        $fragment = explode(';', $vpart, 3);
+                        $type = $fragment[0];
+                        $compValue = $fragment[1] ?? null;
+                        if ($compValue!==null && strpos($compValue, ',') !== false) {
+                            $compValue = explode(',', $compValue);
+                        }
+                        $msg = '';
+                        $this->runCondition($r, $compValue, $type, $fail, $msg);
+                        if ($fail) {
+                            break 2;
+                        }
                     }
                 }
             }
@@ -528,10 +553,11 @@ class ArrayOne
         return $this;
     }
 
+
     /** @noinspection TypeUnsafeArraySearchInspection
      * @noinspection TypeUnsafeComparisonInspection
      */
-    private function runCondition($r, $compareValue, $compareType, bool &$fail, ?string &$genMsg): void
+    private function runCondition($r, $compareValue,string $compareType, bool &$fail, ?string &$genMsg): void
     {
         if (strpos($compareType, 'f:') === 0) {
             if ($this->serviceObject === null) {
@@ -658,6 +684,7 @@ class ArrayOne
                 break;
             case 'eq':
             case '==':
+
                 if (is_array($compareValue)) {
                     /** @noinspection TypeUnsafeArraySearchInspection */
                     if (in_array($r, $compareValue) === $negation) {

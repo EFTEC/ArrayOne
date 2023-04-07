@@ -15,7 +15,6 @@
       "homepage": "https://github.com/EFTEC/"
     }
   ],
-  "minimum-stability": "beta",
   "license": "LGPL-3.0-only",
   "require": {
     "php": ">=7.2.5",
@@ -23,7 +22,7 @@
     "ext-json": "*"
   },
   "require-dev": {
-    "phpunit/phpunit": "^9.5.13"
+    "phpunit/phpunit": "^8.5.13"
   },
   "autoload": {
     "psr-4": {

@@ -577,6 +577,8 @@ $this->makeRequestArrayByExample(['a'=1,'b'=>2]); // ['a'='post','b'=>'post'];
 
 
 ## versions
+* 1.5 2023-04-07
+  * [new] filtercondition() now allow conditions as array. 
 * 1.4 2023-04-05
   * [fix] filtercondition() fixed a warning when the value is null.
   * [new] group() now allow to stack elements
