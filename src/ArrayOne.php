@@ -388,8 +388,34 @@ class ArrayOne
         foreach ($this->currentArray as $index => $row) {
             $this->currentArray[$index] = $this->currentArray[$index][$colName];
         }
+        $this->setCurrentArray($this->currentArray,false);
         return $this;
     }
+
+    /**
+     * It converts an index into a col and the array is converted into an indexed array.
+     * <b>Example:</b><br/>
+     * <pre>
+     * $this->indexToCol('col1'); // ['c'=>[1,2,3],'d'=>[1,2,3]]; [[1,2,3,'c'],['1,2,3,'d']];
+     * </pr>
+     * @param $colName
+     * @return $this
+     */
+    public function indexToCol($colName):ArrayOne
+    {
+        $new=[];
+        $c=-1;
+        foreach($this->currentArray as $k=>$v) {
+            $c++;
+            if(is_array($v)) {
+                $new[$c]=$v;
+                $new[$c][$colName]=$k;
+            }
+        }
+        $this->setCurrentArray($new);
+        return $this;
+    }
+
 
     /**
      * Joins the current array with another array<br/>

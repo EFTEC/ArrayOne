@@ -555,6 +555,19 @@ class ArrayOneTest extends TestCase
         $types = [['name' => 'type1', 'desc' => 'it is the type #1'], ['name' => 'type2', 'desc' => 'it is the type #2']];
         $this->assertEquals($arrayExpected, ArrayOne::set($array)->nav('products')->join($types, 'type', 'name')->all());
     }
+    public function testIndexToCol():void
+    {
+        $array=[1,2,3,'nav'=>['c'=>[1,2,3],'d'=>[1,2,3]]];
+        $r=ArrayOne::set($array)->nav('nav')->indexToCol('col1')->all();
+        //var_export($r);
+        $this->assertEquals([0 => 1, 1 => 2, 2 => 3, 'nav' =>
+            [
+                0 =>
+                    [0 => 1, 1 => 2, 2 => 3, 'col1' => 'c',],
+                1 =>
+                    [0 => 1, 1 => 2, 2 => 3, 'col1' => 'd',],
+            ],],$r);
+    }
 
     public function test2(): void
     {
