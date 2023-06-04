@@ -28,10 +28,14 @@ class ServiceClass
 
 class ArrayOneTest extends TestCase
 {
-    public function test1(): void
+    public function testVersion():void
     {
         $version = (new ArrayOne([]))->getVersion();
         $this->assertNotEmpty($version);
+    }
+    public function test1(): void
+    {
+
         $invoice = [
             'id' => 1,
             'customer' => 10,
@@ -489,6 +493,35 @@ class ArrayOneTest extends TestCase
                     'col_stack'=>[['cat' => 'cat3', 'col_min' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3'],]],
         ];
         $this->assertEquals($expected, $result);
+        $result = ArrayOne::set($array)
+            ->group('cat', [
+                'groupby'=>'group',
+                'col_stack' => 'stack(cat)',
+                'col_min2' => 'min(col_min)',
+                'col_max' => 'max',
+                'col_sum' => 'sum',
+                'col_avg' => 'avg',
+                'col_count' => 'count',
+                'col_first' => 'first',
+                'col_last' => 'last'
+
+            ],false)
+            ->all();
+        $expected = [
+
+                ['groupby'=>'cat1','col_min2' => 1, 'col_max' => 4, 'col_sum' => 5, 'col_avg' => 2.5, 'col_first' => 'john1', 'col_last' => 'doe4', 'col_count' => 2,
+                    'col_stack'=>[
+                        ['cat' => 'cat1', 'col_min' => 1, 'col_max' => 1, 'col_sum' => 1, 'col_avg' => 1, 'col_first' => 'john1', 'col_last' => 'doe1']
+                        ,['cat' => 'cat1', 'col_min' => 4, 'col_max' => 4, 'col_sum' => 4, 'col_avg' => 4, 'col_first' => 'john4', 'col_last' => 'doe4'],]],
+
+                ['groupby'=>'cat2','col_min2' => 2, 'col_max' => 5, 'col_sum' => 7, 'col_avg' => 3.5, 'col_first' => 'john2', 'col_last' => 'doe5', 'col_count' => 2,
+                    'col_stack'=>[['cat' => 'cat2', 'col_min' => 2, 'col_max' => 2, 'col_sum' => 2, 'col_avg' => 2, 'col_first' => 'john2', 'col_last' => 'doe2'],
+                        ['cat' => 'cat2', 'col_min' => 5, 'col_max' => 5, 'col_sum' => 5, 'col_avg' => 5, 'col_first' => 'john5', 'col_last' => 'doe5']]],
+
+                ['groupby'=>'cat3','col_min2' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3', 'col_count' => 1,
+                    'col_stack'=>[['cat' => 'cat3', 'col_min' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3'],]],
+        ];
+        $this->assertEquals($expected, $result);
     }
 
     public function testGroup(): void
@@ -510,7 +543,7 @@ class ArrayOneTest extends TestCase
             ]], $r);
         $r = ArrayOne::set($array)
             ->nav('products')
-            ->group('type', ['price' => 'sum', 'quantity' => 'sum'])->indexToColumn('type')->all();
+            ->group('type', ['price' => 'sum', 'quantity' => 'sum'])->indexToCol('type')->all();
         $this->assertEquals([1, 2, 3,
             'products' => [
                 ['type' => 'type1', 'price' => 1200, 'quantity' => 600]

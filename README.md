@@ -7,7 +7,7 @@ What it does? Filter, order, renaming column, grouping, validating, amongst many
 
 - [x] it works with PHP arrays. PHP arrays allows hierarchy structures using indexed and/or associative values.
 - [x] It is aimed at speed.
-- [x] It is minimalist, using the minimum of dependencies and only 1 PHP class.  Do you hate when a simple library adds a whole framework as difference? Well, not here.
+- [x] It is minimalist, using the minimum of dependencies and only 1 PHP class.  Do you hate when a simple library adds a whole framework as dependency? Well, not here.
 - [x] It works using fluent/nested notations.
 - [x] Every method is documented using PhpDoc.
 
@@ -38,7 +38,7 @@ What it does? Filter, order, renaming column, grouping, validating, amongst many
     * [flat](#flat)
     * [group](#group)
       * [example](#example)
-    * [indexToColumn](#indextocolumn)
+    * [indexToCol](#indextocol)
     * [join](#join)
     * [last](#last)
     * [map](#map)
@@ -63,7 +63,7 @@ What it does? Filter, order, renaming column, grouping, validating, amongst many
     * [makeRequestArrayByExample](#makerequestarraybyexample)
   * [versions](#versions)
   * [License](#license)
-  <!-- TOC -->
+<!-- TOC -->
 
 ## Basic examples
 
@@ -248,10 +248,13 @@ $this->flat(); // [['a'=>1,'b'=>2]] => ['a'=>1,'b'=>2]
 ```
 * **return value** $this
 ### group
-It groups one column and return its column grouped and values aggregated   
+It groups one column and return its column grouped and values aggregated.  
+> The grouped value is used as the new index key.
+
 **Example:**
 ```php
-$this->group('type',['amount'=>'sum','price'=>'sum']);
+$this->group('type',['amount'=>'sum','price'=>'sum']); // ['type1'=>['amount'=>20,'price'=>30]]
+$this->group('type',['am'=>'sum','pri'=>'sum','grp'=>'group'],false); // [['am'=>20,'pri'=>30,'grp'=>'type1']]
 $this->group('type',['newcol'=>'sum(amount)','price'=>'sum(price)']);
 ```
 * **parameter** mixed $column the column to group.
@@ -264,8 +267,10 @@ $this->group('type',['newcol'=>'sum(amount)','price'=>'sum(price)']);
   <b>max</b>: Maximum   
   <b>sum</b>: Sum   
   <b>first</b>: First   
-  <b>last</b>: last
-
+  <b>last</b>: last  
+  <b>group</b>: The grouped value
+* **parameter** bool  $useGroupAsIndex     (def true), if true, then the result will use the grouped value as index<br>
+                                           if false, then the result will return the values as an indexed array.
 #### example
 
 ```php
@@ -298,12 +303,12 @@ $result=ArrayOne::set($array)
 
 ```
 
-### indexToColumn
+### indexToCol
 
 It converts the index into a field, and renumerates the array   
 **Example:**
 ```php
-$this->indexToField('colnew'); // ['a'=>['col1'=>'b','col2'=>'c']] => [['colnew'=>'a','col1'=>'b','col2'=>'c']
+$this->indexToCol('colnew'); // ['a'=>['col1'=>'b','col2'=>'c']] => [['colnew'=>'a','col1'=>'b','col2'=>'c']
 ```
 * **parameter** mixed $newColumn the name of the new column
 * **return value** $this
@@ -369,6 +374,7 @@ $this->reduce(function($row,$index,$prev) { return ['col1'=>$row['col1']+$prev['
   A function using the syntax: function ($row,$index,$prev) where $prev
   is the accumulator value
 * **return value** $this
+
 ### removecol
 It removes a column   
 **Example:**
@@ -477,13 +483,13 @@ class ServiceClass {
 // 2.1) and setting the service class using the class
 ValidateOne
     ->set($array,ServiceClass:class)
-    ->validate('field'=>'fn:test')
+    ->validate('field'=>'fn:test') // or ->validate('field'=>[['fn','test']])
     ->all();
 // 2.2) or you could use an instance
 $obj=new ServiceClass();
 ValidateOne
     ->set($array,$obj)
-    ->validate('field'=>'fn:test')
+    ->validate('field'=>'fn:test') // or ->validate('field'=>[['fn','test']])
     ->all();
 ```
 
@@ -577,6 +583,10 @@ $this->makeRequestArrayByExample(['a'=1,'b'=>2]); // ['a'='post','b'=>'post'];
 
 
 ## versions
+* 1.7 2023-06-04
+  * [new] group() allows to return the grouped value. It also allows to return the values as an indexed array 
+* 1.6 2023-04-10
+  * [optimization] setCurrentArray() now is only used when nav() is called or when the value is returned.
 * 1.5 2023-04-07
   * [new] filtercondition() now allow conditions as array. 
 * 1.4 2023-04-05

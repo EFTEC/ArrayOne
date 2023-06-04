@@ -13,7 +13,7 @@ use RuntimeException;
  */
 class ArrayOne
 {
-    public const VERSION = "1.5";
+    public const VERSION = "1.7";
     /** @var array|null */
     protected $array;
     protected $serviceObject;
@@ -240,6 +240,7 @@ class ArrayOne
      */
     public function nav($colName = null): ArrayOne
     {
+        $this->setCurrentArray();
         $this->curNav = $colName === null ?: explode('.', $colName);
         $c = count($this->curNav);
         $found = false;
@@ -289,7 +290,6 @@ class ArrayOne
         } else {
             $this->currentArray = $tmpArr;
         }
-        $this->setCurrentArray($this->currentArray, false);
         return $this;
     }
 
@@ -302,6 +302,7 @@ class ArrayOne
      */
     public function all(): ?array
     {
+        $this->setCurrentArray();
         return $this->array;
     }
 
@@ -315,6 +316,7 @@ class ArrayOne
      */
     public function current()
     {
+        $this->setCurrentArray();
         return $this->curNav === null ? $this->array : $this->currentArray;
     }
 
@@ -340,7 +342,6 @@ class ArrayOne
                 $this->currentArray[$index][$colName] = $operation($row, $index);
             }
         }
-        $this->setCurrentArray($this->currentArray, false);
         return $this;
     }
 
@@ -388,34 +389,8 @@ class ArrayOne
         foreach ($this->currentArray as $index => $row) {
             $this->currentArray[$index] = $this->currentArray[$index][$colName];
         }
-        $this->setCurrentArray($this->currentArray,false);
         return $this;
     }
-
-    /**
-     * It converts an index into a col and the array is converted into an indexed array.
-     * <b>Example:</b><br/>
-     * <pre>
-     * $this->indexToCol('col1'); // ['c'=>[1,2,3],'d'=>[1,2,3]]; [[1,2,3,'c'],['1,2,3,'d']];
-     * </pr>
-     * @param $colName
-     * @return $this
-     */
-    public function indexToCol($colName):ArrayOne
-    {
-        $new=[];
-        $c=-1;
-        foreach($this->currentArray as $k=>$v) {
-            $c++;
-            if(is_array($v)) {
-                $new[$c]=$v;
-                $new[$c][$colName]=$k;
-            }
-        }
-        $this->setCurrentArray($new);
-        return $this;
-    }
-
 
     /**
      * Joins the current array with another array<br/>
@@ -446,7 +421,6 @@ class ArrayOne
                 }
             }
         }
-        $this->setCurrentArray($this->currentArray, false);
         return $this;
     }
 
@@ -490,7 +464,6 @@ class ArrayOne
         if ($flat && count($this->currentArray) === 1) {
             $this->currentArray = reset($this->currentArray);
         }
-        $this->setCurrentArray($this->currentArray, false);
         return $this;
     }
 
@@ -511,13 +484,13 @@ class ArrayOne
         $fail = false;
         foreach ($row as $k => $r) {
             if (isset($condition[$k])) {
-                if(is_array($condition[$k])) {
-                    if(is_array($condition[$k][0])) {
-                        $conds= $condition[$k]; // [['eq',2],['eq',3]]
+                if (is_array($condition[$k])) {
+                    if (is_array($condition[$k][0])) {
+                        $conds = $condition[$k]; // [['eq',2],['eq',3]]
                     } else {
-                        $conds=[$condition[$k]]; // // ['eq',2] =>[['eq',2']]
+                        $conds = [$condition[$k]]; // // ['eq',2] =>[['eq',2']]
                     }
-                    foreach($conds as $cond) {
+                    foreach ($conds as $cond) {
                         $compValue = $cond[1] ?? null;
                         $type = $cond[0] ?? '';
                         $msg = '';
@@ -532,7 +505,7 @@ class ArrayOne
                         $fragment = explode(';', $vpart, 3);
                         $type = $fragment[0];
                         $compValue = $fragment[1] ?? null;
-                        if ($compValue!==null && strpos($compValue, ',') !== false) {
+                        if ($compValue !== null && strpos($compValue, ',') !== false) {
                             $compValue = explode(',', $compValue);
                         }
                         $msg = '';
@@ -554,7 +527,7 @@ class ArrayOne
      */
     public function map(?callable $condition): ArrayOne
     {
-        $this->setCurrentArray(array_map($condition, $this->currentArray));
+        $this->currentArray = array_map($condition, $this->currentArray);
         return $this;
     }
 
@@ -575,15 +548,13 @@ class ArrayOne
             return $this;
         }
         $this->currentArray = reset($this->currentArray);
-        $this->setCurrentArray($this->currentArray, false);
         return $this;
     }
-
 
     /** @noinspection TypeUnsafeArraySearchInspection
      * @noinspection TypeUnsafeComparisonInspection
      */
-    private function runCondition($r, $compareValue,string $compareType, bool &$fail, ?string &$genMsg): void
+    private function runCondition($r, $compareValue, string $compareType, bool &$fail, ?string &$genMsg): void
     {
         if (strpos($compareType, 'f:') === 0) {
             if ($this->serviceObject === null) {
@@ -595,14 +566,14 @@ class ArrayOne
         }
         if (strpos($compareType, 'not') === 0) {
             $negation = true;
-            $compareType=substr($compareType,3);
+            $compareType = substr($compareType, 3);
         } else {
             $negation = false;
         }
         switch ($compareType) {
             case 'contain':
             case 'like':
-                if ((strpos((string)$r, $compareValue)!==false) === $negation) {
+                if ((strpos((string)$r, $compareValue) !== false) === $negation) {
                     $fail = true;
                     $genMsg = $negation ? '%field does not contains %comp' : '%field contains %comp';
                 }
@@ -632,10 +603,9 @@ class ArrayOne
                 // words, number, accents, spaces, and other characters
                 try {
                     $r = (string)$r;
-                } catch(Exception $ex){
-                    $r='!';
+                } catch (Exception $ex) {
+                    $r = '!';
                 }
-
                 if (preg_match('/^[\pL\pM\p{Zs}.-]+$/u', (string)$r) == $negation) {
                     $fail = true;
                     $genMsg = $negation ?
@@ -710,7 +680,6 @@ class ArrayOne
                 break;
             case 'eq':
             case '==':
-
                 if (is_array($compareValue)) {
                     /** @noinspection TypeUnsafeArraySearchInspection */
                     if (in_array($r, $compareValue) === $negation) {
@@ -764,7 +733,7 @@ class ArrayOne
                 }
                 break;
             case 'gt':
-                if (($r <= $compareValue) !==$negation) {
+                if (($r <= $compareValue) !== $negation) {
                     $fail = true;
                     $genMsg = $negation ?
                         '%field is not less or equal than %comp' :
@@ -772,7 +741,7 @@ class ArrayOne
                 }
                 break;
             case 'gte':
-                if (($r < $compareValue)!==$negation) {
+                if (($r < $compareValue) !== $negation) {
                     $fail = true;
                     $genMsg = $negation ?
                         '%field is not less than %comp' :
@@ -784,51 +753,51 @@ class ArrayOne
                 if (!isset($compareValue[0], $compareValue[1])) {
                     $fail = true;
                     $genMsg = '%field (between) lacks conditions';
-                } else if (($rl < $compareValue[0] || $rl > $compareValue[1]) !==$negation) {
+                } else if (($rl < $compareValue[0] || $rl > $compareValue[1]) !== $negation) {
                     $fail = true;
                     $genMsg = '%field is not between ' . $compareValue[0] . " and " . $compareValue[1];
                 }
                 break;
             case 'true':
-                if (($r === true || $r === 1 || $r === '1')===$negation) {
+                if (($r === true || $r === 1 || $r === '1') === $negation) {
                     $fail = true;
-                    $genMsg = $negation ?  '%field is  true' : '%field is not true';
+                    $genMsg = $negation ? '%field is  true' : '%field is not true';
                 }
                 break;
             case 'false':
-                if (($r === false || $r === 0 || $r === '0')===$negation) {
+                if (($r === false || $r === 0 || $r === '0') === $negation) {
                     $fail = true;
                     $genMsg = $negation ? '%field is false' : '%field is not false';
                 }
                 break;
             case 'array':
-                if (is_array($r)===$negation) {
+                if (is_array($r) === $negation) {
                     $fail = true;
                     $genMsg = $negation ? '%field is an array' : '%field is not an array';
                 }
                 break;
             case 'int':
-                if (is_int($r)===$negation) {
+                if (is_int($r) === $negation) {
                     $fail = true;
-                    $genMsg = $negation ? '%field is an integer': '%field is not an integer';
+                    $genMsg = $negation ? '%field is an integer' : '%field is not an integer';
                 }
                 break;
             case 'string':
-                if (is_string($r)===$negation) {
+                if (is_string($r) === $negation) {
                     $fail = true;
-                    $genMsg = $negation ?  '%field is a string' :  '%field is not a string';
+                    $genMsg = $negation ? '%field is a string' : '%field is not a string';
                 }
                 break;
             case 'float':
-                if (is_float($r)===$negation) {
+                if (is_float($r) === $negation) {
                     $fail = true;
                     $genMsg = $negation ? '%field is a float' : '%field is not a float';
                 }
                 break;
             case 'object':
-                if (is_object($r)===$negation) {
+                if (is_object($r) === $negation) {
                     $fail = true;
-                    $genMsg =$negation ?  '%field is an object' : '%field is not an object';
+                    $genMsg = $negation ? '%field is an object' : '%field is not an object';
                 }
                 break;
             case 'in':
@@ -836,7 +805,7 @@ class ArrayOne
                     $fail = true;
                     $genMsg = '%field has no values to compare';
                 }
-                if (in_array($r, $compareValue)===$negation) {
+                if (in_array($r, $compareValue) === $negation) {
                     $fail = true;
                     $genMsg = $negation ? '%field is in list' : '%field is not in list';
                 }
@@ -857,7 +826,7 @@ class ArrayOne
         if ($this->currentArray === null) {
             return $this;
         }
-        $this->setCurrentArray(reset($this->currentArray));
+        $this->currentArray = reset($this->currentArray);
         return $this;
     }
 
@@ -870,7 +839,7 @@ class ArrayOne
         if ($this->currentArray === null) {
             return $this;
         }
-        $this->setCurrentArray(end($this->currentArray));
+        $this->currentArray = end($this->currentArray);
         return $this;
     }
 
@@ -887,29 +856,27 @@ class ArrayOne
         if (!array_key_exists($index, $this->currentArray)) {
             throw new RuntimeException("nPos: index [$index] does not exist");
         }
-        $this->setCurrentArray($this->currentArray[$index]);
+        $this->currentArray = $this->currentArray[$index];
         return $this;
     }
 
     /**
-     * It is used internally to update the link between array and currentarray.
-     * @param mixed $values
-     * @param bool  $overwrite
+     * It is used internally to update the link between array and currentarray.<br>
+     * It should be called when:<br>
+     * a) the array is returned
+     * b) we change the navigation
      * @return void
      */
-    protected function setCurrentArray($values, bool $overwrite = true): void
+    protected function setCurrentArray(): void
     {
-        if ($overwrite) {
-            $this->currentArray = $values;
-        }
         if ($this->curNav === null) {
-            $this->array =& $this->currentArray;
+            $this->array = $this->currentArray;
             return;
         }
         $c = count($this->curNav);
         switch ($c) {
             case 1:
-                $this->array[$this->curNav[0]] =& $this->currentArray;
+                $this->array[$this->curNav[0]] = $this->currentArray;
                 break;
             case 2:
                 $this->array[$this->curNav[0]][$this->curNav[1]] =& $this->currentArray;
@@ -996,21 +963,20 @@ class ArrayOne
                 }
             }
         }
-        $this->setCurrentArray($initial);
-        //$this->currentArray = $initial;
+        $this->currentArray = $initial;
         return $this;
     }
 
     /**
-     * It converts the index into a field, and renumerates the array<br/>
+     * It converts the index into a column, and converts the array into an indexed array<br/>
      * <b>Example:</b><br/>
      * <pre>
-     * $this->indexToField('colnew'); // ['a'=>['col1'=>'b','col2'=>'c']] => [['colnew'=>'a','col1'=>'b','col2'=>'c']
+     * $this->indexToCol('colnew'); // ['a'=>['col1'=>'b','col2'=>'c']] => [['colnew'=>'a','col1'=>'b','col2'=>'c']
      * </pre>
      * @param mixed $newColumn the name of the new column
      * @return $this
      */
-    public function indexToColumn($newColumn): ArrayOne
+    public function indexToCol($newColumn): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
@@ -1019,7 +985,7 @@ class ArrayOne
             $row[$newColumn] = $index;
         }
         unset($row);
-        $this->setCurrentArray(array_values($this->currentArray));
+        $this->currentArray = array_values($this->currentArray);
         return $this;
     }
 
@@ -1043,7 +1009,7 @@ class ArrayOne
             unset($row[$oldColumn]);
             $result[$newIndex] = $row;
         }
-        $this->setCurrentArray($result);
+        $this->currentArray = $result;
         return $this;
     }
 
@@ -1051,10 +1017,11 @@ class ArrayOne
      * It groups one column and return its column grouped and values aggregated<br/>
      * <b>Example:</b><br/>
      * <pre>
-     * $this->group('type',['amount'=>'sum','price'=>'sum']);
+     * $this->group('type',['amount'=>'sum','price'=>'sum']); // ['type1'=>['amount'=>20,'price'=>30]]
+     * $this->group('type',['am'=>'sum','pri'=>'sum','grp'=>'group'],false); // [['am'=>20,'pri'=>30,'grp'=>'type1']]
      * $this->group('type',['newcol'=>'sum(amount)','price'=>'sum(price)']);
      * </pre>
-     * @param mixed $column              the column to group.
+     * @param mixed $columnToGroup       the column to group.
      * @param array $functionAggregation An associative array ['col-to-agregate'=>'aggregation']<br/>
      *                                   or ['new-col'=>'aggregation(col-to-agregate)']<br/>
      *                                   <b>stack</b>: It stack the rows grouped by the column<br/>
@@ -1065,48 +1032,53 @@ class ArrayOne
      *                                   <b>sum</b>: Sum<br/>
      *                                   <b>first</b>: First<br/>
      *                                   <b>last</b>: last<br/>
-     *
+     *                                   <b>group</b>: The grouped value<br/>
+     * @param bool  $useGroupAsIndex     (def true), if true, then the result will use the grouped value as index<br>
+     *                                   if false, then the result will return the values as an indexed array.
      * @return $this
      */
-    public function group($column, array $functionAggregation): ArrayOne
+    public function group($columnToGroup, array $functionAggregation, bool $useGroupAsIndex = true): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
         }
         $groups = [];
-        $preFunction=[];
+        $preFunction = [];
         foreach ($functionAggregation as $colName => $fun) {
-            $fnPart = explode('(', rtrim($fun,')'), 2);
+            $fnPart = explode('(', rtrim($fun, ')'), 2);
             if (count($fnPart) === 2) { // col1=>sum(col2);
                 [$fun, $colOld] = $fnPart;
             } else { // col1=>sum
                 $colOld = $colName;
             }
-            $preFunction[]=[$colName,$colOld,$fun];
+            $preFunction[] = [$colName, $colOld, $fun];
         }
         foreach ($this->currentArray as $row) {
-            if (array_key_exists($row[$column], $groups)) {
-                $initial = $groups[$row[$column]];
+            if (array_key_exists($row[$columnToGroup], $groups)) {
+                $initial = $groups[$row[$columnToGroup]];
                 $initial['__count']++;
             } else {
                 $initial = ['__count' => 1];
             }
             foreach ($preFunction as $pf) {
-                [$colName,$colOld,$fun]=$pf;
+                [$colName, $colOld, $fun] = $pf;
                 switch ($fun) {
                     case 'stack':
-                        $initial[$colName][]=$row;
+                        $initial[$colName][] = $row;
                         break;
                     case 'first':
                         if (!array_key_exists($colOld, $initial)) {
                             $initial[$colName] = $row[$colOld];
                         }
                         break;
+                    case 'group':
+                        $initial[$colName] = $row[$columnToGroup];
+                        break;
                     case 'last':
                         $initial[$colName] = $row[$colOld];
                         break;
                     case 'count':
-                        $preFunction[]=[$colName,$colOld,$fun];
+                        $preFunction[] = [$colName, $colOld, $fun];
                         break;
                     case 'avg':
                     case 'sum':
@@ -1120,12 +1092,12 @@ class ArrayOne
                         break;
                 }
             }
-            $groups[$row[$column]] = $initial;
+            $groups[$row[$columnToGroup]] = $initial;
         }
         foreach ($groups as $k => $v) {
             foreach ($preFunction as $pf) {
                 /** @noinspection PhpUnusedLocalVariableInspection */
-                [$colName,$colOld,$fun]=$pf;
+                [$colName, $colOld, $fun] = $pf;
                 switch ($fun) {
                     case 'avg':
                         $groups[$k][$colName] /= $groups[$k]['__count'];
@@ -1137,7 +1109,7 @@ class ArrayOne
             }
             unset($groups[$k]['__count']);
         }
-        $this->setCurrentArray($groups);
+        $this->currentArray = $useGroupAsIndex ? $groups : array_values($groups);
         return $this;
     }
 
@@ -1173,7 +1145,6 @@ class ArrayOne
                 return ($row1[$column] < $row2[$column]) ? 1 : -1;
             });
         }
-        $this->setCurrentArray($this->currentArray, false);
         return $this;
     }
 
@@ -1200,7 +1171,6 @@ class ArrayOne
                 $exist[] = $row[$colName] ?? null;
             }
         }
-        $this->setCurrentArray($this->currentArray, false);
         return $this;
     }
 
@@ -1225,7 +1195,6 @@ class ArrayOne
         if ($renumber) {
             $this->currentArray = array_values($this->currentArray);
         }
-        $this->setCurrentArray($this->currentArray, false);
         return $this;
     }
 
@@ -1252,7 +1221,6 @@ class ArrayOne
         if ($renumber) {
             $this->currentArray = array_values($this->currentArray);
         }
-        $this->setCurrentArray($this->currentArray, false);
         return $this;
     }
 
@@ -1280,7 +1248,6 @@ class ArrayOne
         if ($renumber) {
             $this->currentArray = array_values($this->currentArray);
         }
-        $this->setCurrentArray($this->currentArray, false);
         return $this;
     }
 
@@ -1484,7 +1451,7 @@ class ArrayOne
         if ($this->currentArray === null) {
             return $this;
         }
-        $this->setCurrentArray($this->validateRec($comparisonTable, $this->currentArray, $extraFieldError));
+        $this->currentArray = $this->validateRec($comparisonTable, $this->currentArray, $extraFieldError);
         return $this;
     }
 
@@ -1594,7 +1561,6 @@ class ArrayOne
             return $this;
         }
         $this->maskRec($arrayMask, $this->currentArray);
-        $this->setCurrentArray($this->currentArray, false);
         return $this;
     }
 
