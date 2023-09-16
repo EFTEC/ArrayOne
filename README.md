@@ -598,6 +598,8 @@ $this->makeRequestArrayByExample(['a'=1,'b'=>2]); // ['a'='post','b'=>'post'];
 
 
 ## versions
+* 1.8.2 2023-09-16
+  * solved a psr-4 problem in composer.json
 * 1.8.1 2023-09-16
   * change the PHPDOC comments, now it uses markdown instead of "pre" tag.
   * Added ArrayAccess interface.
