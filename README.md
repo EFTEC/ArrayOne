@@ -1,7 +1,9 @@
 # ArrayOne
 It is a minimalist library that process arrays in PHP.
 
-This library is focused to work with business data(reading/saving files, database records, API, etc.), so it is not similar to Numpy, Pandas, NumPHP or alike because they target difference objectives. It is more closely similar to Microsoft PowerQuery.
+This library is focused to work with business data(reading/saving files, database records, API, etc.),
+so it is not similar to Numpy, Pandas, NumPHP or alike because they target difference objectives.
+It is more closely similar to Microsoft PowerQuery.
 What it does? Filter, order, renaming column, grouping, validating, amongst many other operations.
 
 
@@ -141,7 +143,7 @@ ArrayOne::set($array,SomeClass:class)->all(); // the object is used by validatio
 * **parameter**  object|null|string $service the service instance. You can use the class or an object.
 
 ### setRequest
-It sets the initial array readint the values from the request (get/post/header/etc).  
+It sets the initial array readint the values from the request (get/post/header/etc.)  
 **Example:**
 ```php
 ArrayOne::setRequest([
@@ -253,14 +255,25 @@ It groups one column and return its column grouped and values aggregated.
 
 **Example:**
 ```php
-$this->group('type',['amount'=>'sum','price'=>'sum']); // ['type1'=>['amount'=>20,'price'=>30]]
-$this->group('type',['am'=>'sum','pri'=>'sum','grp'=>'group'],false); // [['am'=>20,'pri'=>30,'grp'=>'type1']]
+// group in the same column using a predefined function:
+$this->group('type',['c1'=>'sum','price'=>'sum']); // ['type1'=>['c1'=>20,'price'=>30]]
+// group in a different column using a predefined function:
 $this->group('type',['newcol'=>'sum(amount)','price'=>'sum(price)']);
+// group using an indexed index:
+$this->group('type',['c1'=>'sum','pri'=>'sum','grp'=>'group'],false); // [['c1'=>20,'pri'=>30,'grp'=>'type1']]
+// group using a function:
+$this->group('type',['c1'=>function($cumulate,$row) { return $cumulate+$row['c1'];}]);
+// group using two functions, one per every row and the other at the end:
+$this->group('type',['c1'=>[
+		  function($cumulate,$row) { return $cumulate+$row['c1'];},
+		  function($cumulate,$numrows) { return $cumulate/$numRows;}]); // obtain the average of c1
 ```
 * **parameter** mixed $column the column to group.
 * **parameter** array $functionAggregation An associative array ['col-to-agregate'=>'aggregation']  
   or ['new-col'=>'aggregation(col-to-agregate)']   
-  <b>stack</b>: It stack the rows grouped by the column (like a pivot table).  
+  or ['col-to-aggr'=>function($cumulate,$row) {}]  
+  or ['col-to-aggr'=>[function($cumulate,$row){},function($cumulate,$numRows){}]   
+  <b>stack</b>: It stacks the rows grouped by the column (like a pivot table).  
   <b>count</b>: Count   
   <b>avg</b>: Average   
   <b>min</b>: Minimum   
@@ -401,7 +414,8 @@ $this->removeRow(20);
 It removes the first row or rows. Numeric index could be renumbered.
 **Example:**  
 ```php
-$this->removeFirstRow(3);
+$this->removeFirstRow(); // remove the first row
+$this->removeFirstRow(3); // remove the first 3 rows
 ```
 * **parameter** int  $numberOfRows The number of rows to delete, the default is 1 (the first row)
 * **parameter** bool $renumber     if true then it renumber the list  
@@ -413,7 +427,8 @@ ex: if 1 is deleted then $renumber=false: [0=>0,1=>1,2=>2] =>  [0=>0,2=>2]
 It removes the last row or rows
 **Example:**
 ```php
-$this->removeLastRow(3);
+$this->removeLastRow(); // remove the last row
+$this->removeLastRow(3); // remove the last 3 rows
 ```
 * **parameter** int  $numberOfRows the number of rows to delete
 * **parameter** bool $renumber     if true then it renumber the list (since we are deleting the last value then
@@ -583,8 +598,13 @@ $this->makeRequestArrayByExample(['a'=1,'b'=>2]); // ['a'='post','b'=>'post'];
 
 
 ## versions
+* 1.8.1 2023-09-16
+  * change the PHPDOC comments, now it uses markdown instead of "pre" tag.
+  * Added ArrayAccess interface.
+* 1.8 2023-07-29
+  * [mod] group() allows to specify a custom function(s). 
 * 1.7 2023-06-04
-  * [new] group() allows to return the grouped value. It also allows to return the values as an indexed array 
+  * [new] group() allows returning the grouped value. It also allows returning the values as an indexed array.
 * 1.6 2023-04-10
   * [optimization] setCurrentArray() now is only used when nav() is called or when the value is returned.
 * 1.5 2023-04-07
@@ -618,3 +638,4 @@ Licensed under dual license: LGPL-3.0 and commercial license.
 
 In short:
 - [x] Can I use in a close source application for free? Yes if you don't modify this library.
+- [x] If you modify it, then you must share the source code.

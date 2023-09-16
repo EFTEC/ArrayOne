@@ -1,6 +1,6 @@
 <?php
 
-namespace eftec\tests;
+namespace eftec\test;
 
 use eftec\ArrayOne;
 use Exception;
@@ -32,6 +32,16 @@ class ArrayOneTest extends TestCase
     {
         $version = (new ArrayOne([]))->getVersion();
         $this->assertNotEmpty($version);
+    }
+    public function testAsArray():void
+    {
+        $values=[           ['idproduct' => 1, 'unitPrice' => 200, 'quantity' => 3],
+            ['idproduct' => 2, 'unitPrice' => 300, 'quantity' => 4],
+            ['idproduct' => 3, 'unitPrice' => 300, 'quantity' => 5]];
+        $this->assertEquals(['idproduct' => 1, 'unitPrice' => 200, 'quantity' => 3],ArrayOne::set($values)[0]);
+        foreach(ArrayOne::set($values) as $v) {
+            var_dump($v);
+        }
     }
     public function test1(): void
     {
@@ -224,11 +234,11 @@ class ArrayOneTest extends TestCase
             'value' =>
                 ['a' => 'post', 'b' =>'post', 'c' => 'post',],
             'table' => [0 =>
-                        [
-                            'col1' => 'post',
-                            'col2' => 'post',
-                        ],
+                [
+                    'col1' => 'post',
+                    'col2' => 'post',
                 ],
+            ],
         ];
         $this->assertEquals($expected, $r);
     }
@@ -471,25 +481,32 @@ class ArrayOneTest extends TestCase
                 'col_stack' => 'stack(cat)',
                 'col_min2' => 'min(col_min)',
                 'col_max' => 'max',
-                'col_sum' => 'sum',
+                'col_sum'=>'sum',
                 'col_avg' => 'avg',
                 'col_count' => 'count',
                 'col_first' => 'first',
                 'col_last' => 'last',
+                'col_sum2'=>static function($cumulate,$row) {
+                    return $cumulate+($row['col_sum']/2);
+                },
+                'col_sum3'=>[
+                    static function($cumulate,$row) {return $cumulate+($row['col_sum']/2);},
+                    static function($cumulate,$numRow) {return $cumulate/$numRow;},
+                ],
             ])
             ->all();
         $expected = [
             'cat1' =>
-                ['col_min2' => 1, 'col_max' => 4, 'col_sum' => 5, 'col_avg' => 2.5, 'col_first' => 'john1', 'col_last' => 'doe4', 'col_count' => 2,
+                ['col_min2' => 1, 'col_max' => 4, 'col_sum' => 5, 'col_avg' => 2.5, 'col_first' => 'john1', 'col_last' => 'doe4', 'col_count' => 2,'col_sum2'=>2.5,'col_sum3'=>1.25,
                     'col_stack'=>[
                         ['cat' => 'cat1', 'col_min' => 1, 'col_max' => 1, 'col_sum' => 1, 'col_avg' => 1, 'col_first' => 'john1', 'col_last' => 'doe1']
                         ,['cat' => 'cat1', 'col_min' => 4, 'col_max' => 4, 'col_sum' => 4, 'col_avg' => 4, 'col_first' => 'john4', 'col_last' => 'doe4'],]],
             'cat2' =>
-                ['col_min2' => 2, 'col_max' => 5, 'col_sum' => 7, 'col_avg' => 3.5, 'col_first' => 'john2', 'col_last' => 'doe5', 'col_count' => 2,
+                ['col_min2' => 2, 'col_max' => 5, 'col_sum' => 7, 'col_avg' => 3.5, 'col_first' => 'john2', 'col_last' => 'doe5', 'col_count' => 2,'col_sum2'=>3.5,'col_sum3'=>1.75,
                     'col_stack'=>[['cat' => 'cat2', 'col_min' => 2, 'col_max' => 2, 'col_sum' => 2, 'col_avg' => 2, 'col_first' => 'john2', 'col_last' => 'doe2'],
                         ['cat' => 'cat2', 'col_min' => 5, 'col_max' => 5, 'col_sum' => 5, 'col_avg' => 5, 'col_first' => 'john5', 'col_last' => 'doe5']]],
             'cat3' =>
-                ['col_min2' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3', 'col_count' => 1,
+                ['col_min2' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3', 'col_count' => 1,'col_sum2'=>1.5,'col_sum3'=>1.5,
                     'col_stack'=>[['cat' => 'cat3', 'col_min' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3'],]],
         ];
         $this->assertEquals($expected, $result);
@@ -509,17 +526,17 @@ class ArrayOneTest extends TestCase
             ->all();
         $expected = [
 
-                ['groupby'=>'cat1','col_min2' => 1, 'col_max' => 4, 'col_sum' => 5, 'col_avg' => 2.5, 'col_first' => 'john1', 'col_last' => 'doe4', 'col_count' => 2,
-                    'col_stack'=>[
-                        ['cat' => 'cat1', 'col_min' => 1, 'col_max' => 1, 'col_sum' => 1, 'col_avg' => 1, 'col_first' => 'john1', 'col_last' => 'doe1']
-                        ,['cat' => 'cat1', 'col_min' => 4, 'col_max' => 4, 'col_sum' => 4, 'col_avg' => 4, 'col_first' => 'john4', 'col_last' => 'doe4'],]],
+            ['groupby'=>'cat1','col_min2' => 1, 'col_max' => 4, 'col_sum' => 5, 'col_avg' => 2.5, 'col_first' => 'john1', 'col_last' => 'doe4', 'col_count' => 2,
+                'col_stack'=>[
+                    ['cat' => 'cat1', 'col_min' => 1, 'col_max' => 1, 'col_sum' => 1, 'col_avg' => 1, 'col_first' => 'john1', 'col_last' => 'doe1']
+                    ,['cat' => 'cat1', 'col_min' => 4, 'col_max' => 4, 'col_sum' => 4, 'col_avg' => 4, 'col_first' => 'john4', 'col_last' => 'doe4'],]],
 
-                ['groupby'=>'cat2','col_min2' => 2, 'col_max' => 5, 'col_sum' => 7, 'col_avg' => 3.5, 'col_first' => 'john2', 'col_last' => 'doe5', 'col_count' => 2,
-                    'col_stack'=>[['cat' => 'cat2', 'col_min' => 2, 'col_max' => 2, 'col_sum' => 2, 'col_avg' => 2, 'col_first' => 'john2', 'col_last' => 'doe2'],
-                        ['cat' => 'cat2', 'col_min' => 5, 'col_max' => 5, 'col_sum' => 5, 'col_avg' => 5, 'col_first' => 'john5', 'col_last' => 'doe5']]],
+            ['groupby'=>'cat2','col_min2' => 2, 'col_max' => 5, 'col_sum' => 7, 'col_avg' => 3.5, 'col_first' => 'john2', 'col_last' => 'doe5', 'col_count' => 2,
+                'col_stack'=>[['cat' => 'cat2', 'col_min' => 2, 'col_max' => 2, 'col_sum' => 2, 'col_avg' => 2, 'col_first' => 'john2', 'col_last' => 'doe2'],
+                    ['cat' => 'cat2', 'col_min' => 5, 'col_max' => 5, 'col_sum' => 5, 'col_avg' => 5, 'col_first' => 'john5', 'col_last' => 'doe5']]],
 
-                ['groupby'=>'cat3','col_min2' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3', 'col_count' => 1,
-                    'col_stack'=>[['cat' => 'cat3', 'col_min' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3'],]],
+            ['groupby'=>'cat3','col_min2' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3', 'col_count' => 1,
+                'col_stack'=>[['cat' => 'cat3', 'col_min' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3'],]],
         ];
         $this->assertEquals($expected, $result);
     }

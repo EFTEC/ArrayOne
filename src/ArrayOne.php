@@ -1,7 +1,10 @@
-<?php
+<?php /** @noinspection GrazieInspection */
+
+/** @noinspection UnknownInspectionInspection */
 
 namespace eftec;
 
+use ArrayAccess;
 use Closure;
 use Exception;
 use RuntimeException;
@@ -11,9 +14,9 @@ use RuntimeException;
  * @see       https://github.com/EFTEC/ArrayOne
  * @copyright Jorge Castro Castillo, dual license, see README.md for licensing.
  */
-class ArrayOne
+class ArrayOne implements ArrayAccess
 {
-    public const VERSION = "1.7";
+    public const VERSION = "1.8.1";
     /** @var array|null */
     protected $array;
     protected $serviceObject;
@@ -45,11 +48,11 @@ class ArrayOne
     /**
      * It sets the array to be transformed, and it starts the pipeline
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * ArrayOne::set($array)->all();
      * ArrayOne::set($array,$object)->all(); // the object is used by validate()
      * ArrayOne::set($array,SomeClass:class)->all(); // the object is used by validate()
-     * </pre>
+     * ```
      * @param array|null         $array
      * @param object|null|string $service the service instance. You can use the class or an object.
      * @return ArrayOne
@@ -66,15 +69,15 @@ class ArrayOne
     }
 
     /**
-     * It sets the initial array readint the values from the request (get/post/header/etc.<br/>
+     * It sets the initial array readint the values from the request (get/post/header/etc.)<br/>
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * ArrayOne::setRequest([
      *     'id'=>'get', // $_GET['id'] if not found then it uses the default value (null)
      *     'name'=>'post|default', // $_POST['name'], if not found then it uses "default"
      *     'content'=>'body' // it reads from the POST body
      * ],null); // null is the default value if not other default value is set.
-     * </pre>
+     * ```
      * @param array   $fields          An associative array when the values to read 'id'=>'type;defaultvalue'.
      *                                 Types:<br/>
      *                                 <b>get</b>: get it from the query string <br/>
@@ -158,9 +161,9 @@ class ArrayOne
     /**
      * It sets the array using a json.
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * ArrayOne::setJson('{"a":3,"b":[1,2,3]}')->all();
-     * </pre>
+     * ```
      * @param string $json
      * @return ArrayOne
      */
@@ -173,9 +176,9 @@ class ArrayOne
     /**
      * It sets the array using a csv. This csv must have a header.<br/>
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * ArrayOne::setCsv("a,b,c\n1,2,3\n4,5,6")->all();
-     * </pre>
+     * ```
      * @param string $string    the string to parse
      * @param string $separator default ",". Set the field delimiter (one character only).
      * @param string $enclosure default '"'. Set the field enclosure character (one character only).
@@ -198,10 +201,10 @@ class ArrayOne
     /**
      * It sets the array using a head-less csv.<br/>
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * ArrayOne::setCsvHeadLess("1,2,3\n4,5,6")->all();
      * ArrayOne::setCsvHeadLess("1,2,3\n4,5,6",['c1','c2','c3'])->all();
-     * </pre>
+     * ```
      * @param string     $string    the string to parse
      * @param array|null $header    If the header is null, then it creates an indexed array.<br/>
      *                              if the header is an array, then it is used as header
@@ -229,11 +232,11 @@ class ArrayOne
      * can separate up to 5 levels.
      *
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $this->nav('col');
      * $this->nav(); // return to root.
      * $this->nav('col.subcol.subsubcol'); //  [col=>[subcol=>[subsubcol=>[1,2,3]]]] returns  [1,2,3]
-     * </pre>
+     * ```
      * @param string|int|null $colName   the name of the field. If null then it returns to the root.<br/>
      *                                   You can add more leves by separating by "."
      * @return $this
@@ -293,12 +296,12 @@ class ArrayOne
         return $this;
     }
 
-    /*
+    /**
      * Returns the whole array transformed and not only the current navigation.<br/>
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $this->set($array)->nav('field')->all();
-     * </pre>
+     * ```
      */
     public function all(): ?array
     {
@@ -309,9 +312,9 @@ class ArrayOne
     /**
      * Returns the result indicated by nav(). If you want to return the whole array, then use a()
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $this->set($array)->nav('field')->current();
-     * </pre>
+     * ```
      * @return mixed
      */
     public function current()
@@ -323,9 +326,9 @@ class ArrayOne
     /**
      * It adds or modify a column.
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $this->modCol('col1',function($row,$index) { return $row['col2']*$row['col3'];  });
-     * </pre>
+     * ```
      * @param string|int|null $colName   the name of the column. If null, then it uses the entire row
      * @param callable|null   $operation the operation to realize.
      * @return $this
@@ -348,10 +351,10 @@ class ArrayOne
     /**
      * It removes a column<br/>
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $this->removeCol('col1');
      * $this->removeCol(['col1','col2']);
-     * </pre>
+     * ```
      * @param mixed $colName The name of the column or columns (array)
      * @return $this
      */
@@ -375,9 +378,9 @@ class ArrayOne
     /**
      * Returns a single column as an array of values.<br/>
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $this->col('c1'); // [['c1'=>1,'c2'=>2],['c1'=>3,'c2'=>4]] => [['c1'=>1],['c1'=>3]];
-     * </pre>
+     * ```
      * @param mixed $colName the name of the column
      * @return $this
      */
@@ -396,12 +399,12 @@ class ArrayOne
      * Joins the current array with another array<br/>
      * If the columns of both arrays have the same name, then the current name is retained.<br/>
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $products=[['id'=>1,'name'=>'cocacola','idtype'=>123]];
      * $types=[['id'=>123,'desc'=>'it is the type #123']];
      * ArrayOne::set($products)->join($types,'idtype','id')->all()
      * // [['id'=>1,'prod'=>'cocacola','idtype'=>123,'desc'=>'it is the type #123']] "id" is from product.
-     * </pre>
+     * ```
      * @param array|null $arrayToJoin
      * @param mixed      $column1 the column of the current array
      * @param mixed      $column2 the column of the array to join.
@@ -428,7 +431,7 @@ class ArrayOne
      * It filters the values. If the condition is false, then the row is deleted. It uses array_filter()<br/>
      * The indexes are not rebuilt.<br>
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $array = [['id' => 1, 'name' => 'chile'], ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']];
      * // get the row #2 "argentina":
      * // using a function:
@@ -439,7 +442,7 @@ class ArrayOne
      * $r = ArrayOne::set($array)->filter(['id'=>'eq;2'], false)->result();
      * // using an associative array that contains an array:
      * $r = ArrayOne::set($array)->filter(['id'=>['eq,2], false)->result();
-     * </pre>
+     * ```
      * @param callable|null|array $condition you can use a callable function ($row,$id)<br/>
      *                                       or a comparison array ['id'=>'eq;2|lt;3'] "|" adds more comparisons<br>
      *                                       or a comparison array ['id'=>[['eq',2],['lt',3]]<br>
@@ -521,8 +524,12 @@ class ArrayOne
     }
 
     /**
-     * It calls a function for every element of an array
-     * @param callable|null $condition The function to call.
+     * It calls a function for every element of an array<br>
+     * <b>Example:</b><br/>
+     * <i>$this->map(function($row) { return strtoupper($row); });</i><br>
+     *
+     * @param callable|null $condition The function to call.<br>
+     *                                 It must has an argument (the current row) and it must returns a value
      * @return $this
      */
     public function map(?callable $condition): ArrayOne
@@ -534,9 +541,9 @@ class ArrayOne
     /**
      * It flats the results. If the result is an array with a single row, then it returns the row without the array<br/>
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $this->flat(); // [['a'=>1,'b'=>2]] => ['a'=>1,'b'=>2]
-     * </pre>
+     * ```
      * @return $this
      */
     public function flat(): ArrayOne
@@ -898,10 +905,10 @@ class ArrayOne
     /**
      * You can reduce (flat) an array using aggregations or a custom function.
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $this->reduce(['col1'=>'sum','col2'=>'avg','col3'=>'min','col4'=>'max']);
      * $this->reduce(function($row,$index,$prev) { return ['col1'=>$row['col1']+$prev['col1]];  });
-     * </pre>
+     * ```
      * @param array|callable $functionAggregation An associative array where the index is the column and the value
      *                                            is the function of aggregation<br/>
      *                                            A function using the syntax: function ($row,$index,$prev) where $prev
@@ -970,9 +977,9 @@ class ArrayOne
     /**
      * It converts the index into a column, and converts the array into an indexed array<br/>
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $this->indexToCol('colnew'); // ['a'=>['col1'=>'b','col2'=>'c']] => [['colnew'=>'a','col1'=>'b','col2'=>'c']
-     * </pre>
+     * ```
      * @param mixed $newColumn the name of the new column
      * @return $this
      */
@@ -992,9 +999,9 @@ class ArrayOne
     /**
      * it converts a column into an index<br/>
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $this->indexToField('colold'); //  [['colold'=>'a','col1'=>'b','col2'=>'c'] => ['a'=>['col1'=>'b','col2'=>'c']]
-     * </pre>
+     * ```
      * @param mixed $oldColumn the old column. This column will be converted into an index
      * @return $this
      */
@@ -1016,39 +1023,57 @@ class ArrayOne
     /**
      * It groups one column and return its column grouped and values aggregated<br/>
      * <b>Example:</b><br/>
-     * <pre>
-     * $this->group('type',['amount'=>'sum','price'=>'sum']); // ['type1'=>['amount'=>20,'price'=>30]]
-     * $this->group('type',['am'=>'sum','pri'=>'sum','grp'=>'group'],false); // [['am'=>20,'pri'=>30,'grp'=>'type1']]
+     * ```php
+     * // group in the same column using a predefined function:
+     * $this->group('type',['c1'=>'sum','price'=>'sum']); // ['type1'=>['c1'=>20,'price'=>30]]
+     * // group in a different column using a predefined function:
      * $this->group('type',['newcol'=>'sum(amount)','price'=>'sum(price)']);
-     * </pre>
-     * @param mixed $columnToGroup       the column to group.
-     * @param array $functionAggregation An associative array ['col-to-agregate'=>'aggregation']<br/>
-     *                                   or ['new-col'=>'aggregation(col-to-agregate)']<br/>
-     *                                   <b>stack</b>: It stack the rows grouped by the column<br/>
-     *                                   <b>count</b>: Count<br/>
-     *                                   <b>avg</b>: Average<br/>
-     *                                   <b>min</b>: Minimum<br/>
-     *                                   <b>max</b>: Maximum<br/>
-     *                                   <b>sum</b>: Sum<br/>
-     *                                   <b>first</b>: First<br/>
-     *                                   <b>last</b>: last<br/>
-     *                                   <b>group</b>: The grouped value<br/>
-     * @param bool  $useGroupAsIndex     (def true), if true, then the result will use the grouped value as index<br>
-     *                                   if false, then the result will return the values as an indexed array.
+     * // group using an indexed index:
+     * $this->group('type',['c1'=>'sum','pri'=>'sum','grp'=>'group'],false); // [['c1'=>20,'pri'=>30,'grp'=>'type1']]
+     * // group using a function:
+     * $this->group('type',['c1'=>function($cumulate,$row) { return $cumulate+$row['c1'];}]);
+     * // group using two functions, one per every row and the other at the end:
+     * $this->group('type',['c1'=>[
+     *              function($cumulate,$row) { return $cumulate+$row['c1'];},
+     *              function($cumulate,$numrows) { return $cumulate/$numRows;}]); // obtain the average of c1
+     * ```
+     * @param mixed $columnToGroup the column to group.
+     * @param array $funcAggreg    An associative array ['col-to-aggregate'=>'aggregation']<br/>
+     *                             or ['new-col'=>'aggregation(col-to-agregate)']<br/>
+     *                             or ['col-to-aggr'=>function($cumulate,$row) {}]<br/>
+     *                             or ['col-to-aggr'=>[function($cumulate,$row){},function($cumulate,$numRows){}]<br/>
+     *                             <b>stack</b>: It stack the rows grouped by the column<br/>
+     *                             <b>count</b>: Count<br/>
+     *                             <b>avg</b>: Average<br/>
+     *                             <b>min</b>: Minimum<br/>
+     *                             <b>max</b>: Maximum<br/>
+     *                             <b>sum</b>: Sum<br/>
+     *                             <b>first</b>: First<br/>
+     *                             <b>last</b>: last<br/>
+     *                             <b>group</b>: The grouped value<br/>
+     *                             <b>function:$cumulate</b>: Is where the value will be accumulated,
+     *                             initially is null<br/>
+     *                             <b>function:$row</b>: The current value of the row<br/>
+     * @param bool  $useGroupIndex (def true), if true, then the result will use the grouped value as index<br>
+     *                             if false, then the result will return the values as an indexed array.
      * @return $this
      */
-    public function group($columnToGroup, array $functionAggregation, bool $useGroupAsIndex = true): ArrayOne
+    public function group($columnToGroup, array $funcAggreg, bool $useGroupIndex = true): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
         }
         $groups = [];
         $preFunction = [];
-        foreach ($functionAggregation as $colName => $fun) {
-            $fnPart = explode('(', rtrim($fun, ')'), 2);
-            if (count($fnPart) === 2) { // col1=>sum(col2);
-                [$fun, $colOld] = $fnPart;
-            } else { // col1=>sum
+        foreach ($funcAggreg as $colName => $fun) {
+            if (is_string($fun)) {
+                $fnPart = explode('(', rtrim($fun, ')'), 2);
+                if (count($fnPart) === 2) { // col1=>sum(col2);
+                    [$fun, $colOld] = $fnPart;
+                } else { // col1=>sum
+                    $colOld = $colName;
+                }
+            } else {
                 $colOld = $colName;
             }
             $preFunction[] = [$colName, $colOld, $fun];
@@ -1062,35 +1087,43 @@ class ArrayOne
             }
             foreach ($preFunction as $pf) {
                 [$colName, $colOld, $fun] = $pf;
-                switch ($fun) {
-                    case 'stack':
-                        $initial[$colName][] = $row;
-                        break;
-                    case 'first':
-                        if (!array_key_exists($colOld, $initial)) {
+                if (is_callable($fun) && !is_string($fun)) {
+                    $initial[$colName] = $fun($initial[$colName] ?? null, $row);
+                } else if(is_array($fun)) {
+                    $initial[$colName] = $fun[0]($initial[$colName] ?? null, $row);
+                } else {
+                    switch ($fun) {
+                        case 'stack':
+                            $initial[$colName][] = $row;
+                            break;
+                        case 'first':
+                            if (!array_key_exists($colOld, $initial)) {
+                                $initial[$colName] = $row[$colOld];
+                            }
+                            break;
+                        case 'group':
+                            $initial[$colName] = $row[$columnToGroup];
+                            break;
+                        case 'last':
                             $initial[$colName] = $row[$colOld];
-                        }
-                        break;
-                    case 'group':
-                        $initial[$colName] = $row[$columnToGroup];
-                        break;
-                    case 'last':
-                        $initial[$colName] = $row[$colOld];
-                        break;
-                    case 'count':
-                        $preFunction[] = [$colName, $colOld, $fun];
-                        break;
-                    case 'avg':
-                    case 'sum':
-                        $initial[$colName] = $row[$colOld] + ($initial[$colName] ?? null);
-                        break;
-                    case 'min':
-                        $initial[$colName] = min($row[$colOld], $initial[$colName] ?? PHP_INT_MAX);
-                        break;
-                    case 'max':
-                        $initial[$colName] = max($row[$colOld], $initial[$colName] ?? null);
-                        break;
-                }
+                            break;
+                        case 'count':
+                            $preFunction[] = [$colName, $colOld, $fun];
+                            break;
+                        case 'avg':
+                        case 'sum':
+                            $initial[$colName] = $row[$colOld] + ($initial[$colName] ?? null);
+                            break;
+                        case 'min':
+                            $initial[$colName] = min($row[$colOld], $initial[$colName] ?? PHP_INT_MAX);
+                            break;
+                        case 'max':
+                            $initial[$colName] = max($row[$colOld], $initial[$colName] ?? null);
+                            break;
+                        default:
+                            $initial[$colName] = "error:function [$fun] not defined!!";
+                    }
+                } // callable
             }
             $groups[$row[$columnToGroup]] = $initial;
         }
@@ -1098,27 +1131,31 @@ class ArrayOne
             foreach ($preFunction as $pf) {
                 /** @noinspection PhpUnusedLocalVariableInspection */
                 [$colName, $colOld, $fun] = $pf;
-                switch ($fun) {
-                    case 'avg':
-                        $groups[$k][$colName] /= $groups[$k]['__count'];
-                        break;
-                    case 'count':
-                        $groups[$k][$colName] = $groups[$k]['__count'];
-                        break;
+                if(is_array($fun)) {
+                    $groups[$k][$colName]= $fun[1]($groups[$k][$colName], $groups[$k]['__count']);
+                } else {
+                    switch ($fun) {
+                        case 'avg':
+                            $groups[$k][$colName] /= $groups[$k]['__count'];
+                            break;
+                        case 'count':
+                            $groups[$k][$colName] = $groups[$k]['__count'];
+                            break;
+                    }
                 }
             }
             unset($groups[$k]['__count']);
         }
-        $this->currentArray = $useGroupAsIndex ? $groups : array_values($groups);
+        $this->currentArray = $useGroupIndex ? $groups : array_values($groups);
         return $this;
     }
 
     /**
      * Sort an array<br/>
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $this->sort('payment','desc'); // sort an array using the column paypent descending.
-     * </pre>
+     * ```
      * @param mixed  $column    if column is null, then it sorts the row (instead of a column of the row)
      * @param string $direction =['asc','desc'][$i]  ascending or descending.
      * @return $this
@@ -1151,9 +1188,9 @@ class ArrayOne
     /**
      * This function removes duplicates of a table.<br/>
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $this->removeDuplicate('col');
-     * </pre>
+     * ```
      * @param mixed $colName the column to compare if the rows are duplicated.
      * @return $this
      */
@@ -1177,9 +1214,9 @@ class ArrayOne
     /**
      * It removes the row with the id $rowId. If the row does not exist, then it does nothing
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $this->removeRow(20);
-     * </pre>
+     * ```
      * @param mixed $rowId    The id of the row to delete
      * @param bool  $renumber if true then it renumber the list<br/>
      *                        ex: if 1 is deleted then $renumber=true: [0=>0,1=>1,2=>2] =>  [0=>0,1=>2]<br/>
@@ -1201,9 +1238,10 @@ class ArrayOne
     /**
      * It removes the first row or rows. Numeric index could be renumbered.
      * <b>Example:</b><br/>
-     * <pre>
-     * $this->removeFirstRow(3);
-     * </pre>
+     * ```php
+     * $this->removeFirstRow(); // remove the first row
+     * $this->removeFirstRow(3); // remove the first 3 rows
+     * ```
      * @param int  $numberOfRows The number of rows to delete, the default is 1 (the first row)
      * @param bool $renumber     if true then it renumber the list<br/>
      *                           ex: if 1 is deleted then $renumber=true: [0=>0,1=>1,'x'=>2] =>  [0=>0,1=>2]<br/>
@@ -1227,9 +1265,9 @@ class ArrayOne
     /**
      * It removes the last row or rows
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $this->removeLastRow(3);
-     * </pre>
+     * ```
      * @param int  $numberOfRows the number of rows to delete
      * @param bool $renumber     if true then it renumber the list (since we are deleting the last value then
      *                           usually we don't need it<br/>
@@ -1254,9 +1292,9 @@ class ArrayOne
     /**
      * It generates a validate-array using an example array. It could be used by validation() and filter()<br/>
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $this->makeValidateArrayByExample(['1','a','f'=>3.3]); // ['int','string','f'=>'float'];
-     * </pre>
+     * ```
      * @param array $array
      * @return array
      */
@@ -1332,9 +1370,9 @@ class ArrayOne
     /**
      * It creates an associative array that could be used to be used by setRequest()<br/>
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $this->makeRequestArrayByExample(['a'=1,'b'=>2]); // ['a'='post','b'=>'post'];
-     * </pre>
+     * ```
      *
      * @param array  $array An associative array with some values.
      * @param string $type  =['get','post','request','header','cookie'][$i] The default type
@@ -1351,9 +1389,9 @@ class ArrayOne
     /**
      * We call a method for every element of the array recursively.<br/>
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * ArrayOne::makeWalk(['a'=>'hello','b'=>['c'=>'world'],function($row,$id) { return strotupper($row);});
-     * </pre>
+     * ```
      * @param array    $array         Our initial array
      * @param callable $method        the method to call, example: function($row,$index) { return $row; }
      * @param bool     $identifyTable (def: false) if we want the array identify inside arrays as table
@@ -1399,13 +1437,13 @@ class ArrayOne
     /**
      * Validate the current array using a comparison table<br/>
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $this->validate([
      *          'id'=>'int',
      *          'table'=>[['col1'=>'int','col2'=>'string']],   // note the double [[ ]] to indicate a table of values
      *          'list'=>[['int']]
      *     ]);
-     * </pre>
+     * ```
      * @param array $comparisonTable <br/>
      *                               <b>not-valid-</b> : negates an validation, example "notint"<br/>
      *                               <b>nullable</b> :the value can be a null. If the value is null, then it ignores
@@ -1547,11 +1585,11 @@ class ArrayOne
      * Masking deletes all field that are not part of our mask<br/>
      * The mask is smart to recognize a table, so it could mask multiples values by only specifying the first row.<br/>
      * <b>Example:</b><br/>
-     * <pre>
+     * ```php
      * $array=['a'=>1,'b'=>2,'c'=>3,'items'=>[[a1'=>1,'a2'=>2,'a3'=3],[a1'=>1,'a2'=>2,'a3'=3]];
      * $mask=['a'=>1,'items'=>[[a1'=>1]]; // [[a1'=>1]] masks an entire table
      * $this->mask($mask); // $array=['a'=>1,'items'=>[[a1'=>1],[a1'=>1]];
-     * </pre>
+     * ```
      * @param array $arrayMask An associative array with the mask. The mask could contain any value.
      * @return ArrayOne
      */
@@ -1600,4 +1638,27 @@ class ArrayOne
             }
         }
     }
+
+
+    //region interface ArrayAccess
+    public function offsetSet($offset, $value): void {
+        if (is_null($offset)) {
+            $this->array[] = $value;
+        } else {
+            $this->array[$offset] = $value;
+        }
+    }
+
+    public function offsetExists($offset): bool {
+        return isset($this->array[$offset]);
+    }
+
+    public function offsetUnset($offset): void {
+        unset($this->array[$offset]);
+    }
+
+    public function offsetGet($offset) {
+        return $this->array[$offset] ?? null;
+    }
+    //endregion
 }
