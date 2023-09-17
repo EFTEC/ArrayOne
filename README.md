@@ -84,7 +84,7 @@ $invoice=[
 $arr=ArrayOne::set($invoice)
     ->nav('detail')
     ->reduce(['unitPrice'=>'sum','quantity'=>'sum'])
-    ->current(); //['unitPrice'=>800,'quanty'=>12]
+    ->getCurrent(); //['unitPrice'=>800,'quanty'=>12]
 ```
 
 ## Getting started
@@ -101,7 +101,7 @@ ArrayOne::set($array); // Initial operator: $array is our initial array.
     ->someoperator1()  // Middle operator: here we do one or many operations to transform the array
     ->someoperator2()
     ->someoperator3()
-    ->current(); // End operator: and we get the end result that usually is an array but it could be even a literal.
+    ->getCurrent(); // End operator: and we get the end result that usually is an array but it could be even a literal.
 ```
 
 ## Concepts
@@ -203,7 +203,7 @@ ArrayOne::setCsvHeadLess("1,2,3\n4,5,6",['c1','c2','c3'])->all();
 * **parameter** string $escape default "\\". Set the escape character (one character only).
 
 ## middle operator
-Middle operators are operators that are called between the initial operator **set()** and the end operator **all()** or **current()**.
+Middle operators are operators that are called between the initial operator **set()** and the end operator **all()** or **getCurrent()**.
 They do the transformation and they could be stacked.
 
 **example:**
@@ -235,9 +235,9 @@ The indexes are not rebuilt.
 ```php
 $array = [['id' => 1, 'name' => 'chile'], ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']];
 // ['id' => 2, 'name' => 'argentina']
-$r = ArrayOne::set($array)->filter(function($id, $row) {return $row['id'] === 2;}, true)->current();
+$r = ArrayOne::set($array)->filter(function($id, $row) {return $row['id'] === 2;}, true)->getCurrent();
 // [1=>['id' => 2, 'name' => 'argentina']]
-$r = ArrayOne::set($array)->filter(function($id, $row) {return $row['id'] === 2;}, false)->current();
+$r = ArrayOne::set($array)->filter(function($id, $row) {return $row['id'] === 2;}, false)->getCurrent();
 ```
 ### first
 It returns the first element of an array.
@@ -569,7 +569,7 @@ Returns the result indicated by nav(). If you want to return the whole array, th
 
 **Example:** 
 ```php
-$this->set($array)->nav('field')->current();
+$this->set($array)->nav('field')->getCurrent();
 ```
 * **return value** mixed
 
@@ -598,6 +598,9 @@ $this->makeRequestArrayByExample(['a'=1,'b'=>2]); // ['a'='post','b'=>'post'];
 
 
 ## versions
+* 1.8.3 2023-09-16 
+  * offsetGet() generates a warning in php 8.1
+  * current() is marked as deprecated (but it is still functional), use getCurrent()
 * 1.8.2 2023-09-16
   * solved a psr-4 problem in composer.json
 * 1.8.1 2023-09-16

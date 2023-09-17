@@ -1,4 +1,5 @@
-<?php /** @noinspection GrazieInspection */
+<?php /** @noinspection PhpLanguageLevelInspection */
+/** @noinspection GrazieInspection */
 
 /** @noinspection UnknownInspectionInspection */
 
@@ -310,14 +311,23 @@ class ArrayOne implements ArrayAccess
     }
 
     /**
+     * @return array|mixed|null
+     * @deprecated This functionality will work 1.x but in 2.x will be discontinued. Use getCurrent()
+     */
+    public function current()
+    {
+        return $this->getCurrent();
+    }
+
+    /**
      * Returns the result indicated by nav(). If you want to return the whole array, then use a()
      * <b>Example:</b><br/>
      * ```php
-     * $this->set($array)->nav('field')->current();
+     * $this->set($array)->nav('field')->getCurrent();
      * ```
      * @return mixed
      */
-    public function current()
+    public function getCurrent()
     {
         $this->setCurrentArray();
         return $this->curNav === null ? $this->array : $this->currentArray;
@@ -1657,6 +1667,16 @@ class ArrayOne implements ArrayAccess
         unset($this->array[$offset]);
     }
 
+    /**
+     * It gets a value of the array<br>
+     * <b>Example:</b><br>
+     * ```php
+     * $this->offsetGet(1); // or $this[1];
+     * ```
+     * @param mixed $offset
+     * @return mixed|null
+     */
+    #[\ReturnTypeWillChange]
     public function offsetGet($offset) {
         return $this->array[$offset] ?? null;
     }

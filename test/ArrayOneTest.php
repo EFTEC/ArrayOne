@@ -246,9 +246,9 @@ class ArrayOneTest extends TestCase
     public function testLevel(): void
     {
         $array = ['one' => ['two' => ['three' => ['four' => ['five' => [1, 2, 3]]]]]];
-        $this->assertEquals([1, 2, 3], ArrayOne::set($array)->nav('one.two.three.four.five')->current());
+        $this->assertEquals([1, 2, 3], ArrayOne::set($array)->nav('one.two.three.four.five')->getCurrent());
         try {
-            ArrayOne::set($array)->nav('one.two.three.fourx.five')->current(); // this must throw an exception.
+            ArrayOne::set($array)->nav('one.two.three.fourx.five')->getCurrent(); // this must throw an exception.
             $this->assertEquals(false, true);
         } catch (Exception $ex) {
             $this->assertEquals(true, true);
@@ -262,9 +262,9 @@ class ArrayOneTest extends TestCase
             ->map(function($row) {
                 return $row * 10;
             })
-            ->current());
+            ->getCurrent());
         try {
-            ArrayOne::set($array)->nav('one.two.three.fourx.five')->current(); // this must throw an exception.
+            ArrayOne::set($array)->nav('one.two.three.fourx.five')->getCurrent(); // this must throw an exception.
             $this->assertEquals(false, true);
         } catch (Exception $ex) {
             $this->assertEquals(true, true);
@@ -643,12 +643,12 @@ class ArrayOneTest extends TestCase
         $this->assertEquals([1, 2, 3
             , 'products' => 'cocacola3'
         ], $r);
-        $r = ArrayOne::set($array)->nav('products')->nPos(1)->current();
+        $r = ArrayOne::set($array)->nav('products')->nPos(1)->getCurrent();
         $this->assertEquals(['name' => 'cocacola2', 'price' => 600, 'quantity' => 300], $r);
         $r = ArrayOne::set($array)
             ->nav('products')
             ->nPos(1)
-            ->current();
+            ->getCurrent();
         $this->assertEquals(['name' => 'cocacola2',
             'price' => 600,
             'quantity' => 300], $r);
@@ -906,20 +906,20 @@ class ArrayOneTest extends TestCase
         $array = [['id' => 1, 'name' => 'chile'], ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']];
         $r = ArrayOne::set($array)->filter(function($row, $id) {
             return $row['id'] === 2;
-        }, true)->current();
+        }, true)->getCurrent();
         $this->assertEquals(['id' => 2, 'name' => 'argentina'], $r);
         $r = ArrayOne::set($array)->filter(function($row, $id) {
             return $row['id'] === 2;
-        }, false)->current();
+        }, false)->getCurrent();
         $this->assertEquals([1 => ['id' => 2, 'name' => 'argentina']], $r);
     }
 
     public function testfilter2(): void
     {
         $array = [['id' => 1, 'name' => 'chile'], ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']];
-        $r = ArrayOne::set($array)->filter(['id' => 'eq;2'], true)->current();
+        $r = ArrayOne::set($array)->filter(['id' => 'eq;2'], true)->getCurrent();
         $this->assertEquals(['id' => 2, 'name' => 'argentina'], $r);
-        $r = ArrayOne::set($array)->filter(['id' => 'gte;2'])->current();
+        $r = ArrayOne::set($array)->filter(['id' => 'gte;2'])->getCurrent();
         $this->assertEquals([1 => ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']], $r);
     }
 
