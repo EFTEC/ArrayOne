@@ -17,7 +17,7 @@ use RuntimeException;
  */
 class ArrayOne implements ArrayAccess
 {
-    public const VERSION = "1.8.1";
+    public const VERSION = "1.8.3";
     /** @var array|null */
     protected $array;
     protected $serviceObject;
