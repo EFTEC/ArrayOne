@@ -17,7 +17,7 @@ use RuntimeException;
  */
 class ArrayOne implements ArrayAccess
 {
-    public const VERSION = "1.8.3";
+    public const VERSION = "1.9";
     /** @var array|null */
     protected $array;
     protected $serviceObject;
@@ -48,7 +48,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * It sets the array to be transformed, and it starts the pipeline
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * ArrayOne::set($array)->all();
      * ArrayOne::set($array,$object)->all(); // the object is used by validate()
@@ -71,7 +71,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * It sets the initial array readint the values from the request (get/post/header/etc.)<br/>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * ArrayOne::setRequest([
      *     'id'=>'get', // $_GET['id'] if not found then it uses the default value (null)
@@ -161,7 +161,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * It sets the array using a json.
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * ArrayOne::setJson('{"a":3,"b":[1,2,3]}')->all();
      * ```
@@ -176,7 +176,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * It sets the array using a csv. This csv must have a header.<br/>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * ArrayOne::setCsv("a,b,c\n1,2,3\n4,5,6")->all();
      * ```
@@ -201,7 +201,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * It sets the array using a head-less csv.<br/>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * ArrayOne::setCsvHeadLess("1,2,3\n4,5,6")->all();
      * ArrayOne::setCsvHeadLess("1,2,3\n4,5,6",['c1','c2','c3'])->all();
@@ -232,7 +232,7 @@ class ArrayOne implements ArrayAccess
      * If you want to select a subcolumn, then you could indicate it separated by dot: column.subcolumn. You
      * can separate up to 5 levels.
      *
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $this->nav('col');
      * $this->nav(); // return to root.
@@ -299,7 +299,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * Returns the whole array transformed and not only the current navigation.<br/>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $this->set($array)->nav('field')->all();
      * ```
@@ -321,7 +321,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * Returns the result indicated by nav(). If you want to return the whole array, then use a()
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $this->set($array)->nav('field')->getCurrent();
      * ```
@@ -335,7 +335,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * It adds or modify a column.
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $this->modCol('col1',function($row,$index) { return $row['col2']*$row['col3'];  });
      * ```
@@ -360,7 +360,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * It removes a column<br/>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $this->removeCol('col1');
      * $this->removeCol(['col1','col2']);
@@ -386,8 +386,39 @@ class ArrayOne implements ArrayAccess
     }
 
     /**
+     * It transforms a row of values into a single value. If a row does not contains a column then it returns null
+     *
+     * **Example:**
+     * ```php
+     * $values=[['a'=>1,'b'=>2'],['a'=>2,'b'=>3'],['c'=>4]];
+     * $this->rowToValue('a'); // [1,2]
+     * $this->rowToValue('a',true); // [1,2,null]
+     * ```
+     * @param mixed $colName The name of the column
+     * @param bool  $nullWhenNotFound if true then it returns null when the column is not found in a row<br>
+     *                                otherwise, it skips the column
+     * @return ArrayOne
+     */
+    public function rowToValue($colName,bool $nullWhenNotFound=false):ArrayOne
+    {
+        if ($this->currentArray === null) {
+            return $this;
+        }
+        foreach($this->currentArray as $k=>$v) {
+            $tmp=$v[$colName]??null;
+            if($tmp===null && !$nullWhenNotFound) {
+                unset($this->currentArray[$k]);
+            } else {
+                $this->currentArray[$k] = $tmp;
+            }
+
+        }
+        return $this;
+    }
+
+    /**
      * Returns a single column as an array of values.<br/>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $this->col('c1'); // [['c1'=>1,'c2'=>2],['c1'=>3,'c2'=>4]] => [['c1'=>1],['c1'=>3]];
      * ```
@@ -408,7 +439,7 @@ class ArrayOne implements ArrayAccess
     /**
      * Joins the current array with another array<br/>
      * If the columns of both arrays have the same name, then the current name is retained.<br/>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $products=[['id'=>1,'name'=>'cocacola','idtype'=>123]];
      * $types=[['id'=>123,'desc'=>'it is the type #123']];
@@ -440,7 +471,7 @@ class ArrayOne implements ArrayAccess
     /**
      * It filters the values. If the condition is false, then the row is deleted. It uses array_filter()<br/>
      * The indexes are not rebuilt.<br>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $array = [['id' => 1, 'name' => 'chile'], ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']];
      * // get the row #2 "argentina":
@@ -535,7 +566,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * It calls a function for every element of an array<br>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * <i>$this->map(function($row) { return strtoupper($row); });</i><br>
      *
      * @param callable|null $condition The function to call.<br>
@@ -550,7 +581,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * It flats the results. If the result is an array with a single row, then it returns the row without the array<br/>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $this->flat(); // [['a'=>1,'b'=>2]] => ['a'=>1,'b'=>2]
      * ```
@@ -914,7 +945,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * You can reduce (flat) an array using aggregations or a custom function.
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $this->reduce(['col1'=>'sum','col2'=>'avg','col3'=>'min','col4'=>'max']);
      * $this->reduce(function($row,$index,$prev) { return ['col1'=>$row['col1']+$prev['col1]];  });
@@ -986,7 +1017,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * It converts the index into a column, and converts the array into an indexed array<br/>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $this->indexToCol('colnew'); // ['a'=>['col1'=>'b','col2'=>'c']] => [['colnew'=>'a','col1'=>'b','col2'=>'c']
      * ```
@@ -1008,7 +1039,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * it converts a column into an index<br/>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $this->indexToField('colold'); //  [['colold'=>'a','col1'=>'b','col2'=>'c'] => ['a'=>['col1'=>'b','col2'=>'c']]
      * ```
@@ -1032,7 +1063,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * It groups one column and return its column grouped and values aggregated<br/>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * // group in the same column using a predefined function:
      * $this->group('type',['c1'=>'sum','price'=>'sum']); // ['type1'=>['c1'=>20,'price'=>30]]
@@ -1162,7 +1193,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * Sort an array<br/>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $this->sort('payment','desc'); // sort an array using the column paypent descending.
      * ```
@@ -1197,7 +1228,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * This function removes duplicates of a table.<br/>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $this->removeDuplicate('col');
      * ```
@@ -1223,7 +1254,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * It removes the row with the id $rowId. If the row does not exist, then it does nothing
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $this->removeRow(20);
      * ```
@@ -1247,7 +1278,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * It removes the first row or rows. Numeric index could be renumbered.
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $this->removeFirstRow(); // remove the first row
      * $this->removeFirstRow(3); // remove the first 3 rows
@@ -1274,7 +1305,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * It removes the last row or rows
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $this->removeLastRow(3);
      * ```
@@ -1301,7 +1332,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * It generates a validate-array using an example array. It could be used by validation() and filter()<br/>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $this->makeValidateArrayByExample(['1','a','f'=>3.3]); // ['int','string','f'=>'float'];
      * ```
@@ -1379,7 +1410,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * It creates an associative array that could be used to be used by setRequest()<br/>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $this->makeRequestArrayByExample(['a'=1,'b'=>2]); // ['a'='post','b'=>'post'];
      * ```
@@ -1398,7 +1429,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * We call a method for every element of the array recursively.<br/>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * ArrayOne::makeWalk(['a'=>'hello','b'=>['c'=>'world'],function($row,$id) { return strotupper($row);});
      * ```
@@ -1446,7 +1477,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * Validate the current array using a comparison table<br/>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $this->validate([
      *          'id'=>'int',
@@ -1594,7 +1625,7 @@ class ArrayOne implements ArrayAccess
      * It masks the current array using another array.<br/>
      * Masking deletes all field that are not part of our mask<br/>
      * The mask is smart to recognize a table, so it could mask multiples values by only specifying the first row.<br/>
-     * <b>Example:</b><br/>
+     * **Example:**<br/>
      * ```php
      * $array=['a'=>1,'b'=>2,'c'=>3,'items'=>[[a1'=>1,'a2'=>2,'a3'=3],[a1'=>1,'a2'=>2,'a3'=3]];
      * $mask=['a'=>1,'items'=>[[a1'=>1]]; // [[a1'=>1]] masks an entire table
@@ -1669,7 +1700,7 @@ class ArrayOne implements ArrayAccess
 
     /**
      * It gets a value of the array<br>
-     * <b>Example:</b><br>
+     * **Example:**<br>
      * ```php
      * $this->offsetGet(1); // or $this[1];
      * ```

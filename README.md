@@ -598,8 +598,10 @@ $this->makeRequestArrayByExample(['a'=1,'b'=>2]); // ['a'='post','b'=>'post'];
 
 
 ## versions
+* 1.9 2023-11-13
+  * added rowToValue() 
 * 1.8.3 2023-09-16 
-  * offsetGet() generates a warning in php 8.1
+  * offsetGet() generates a warning in php 8.1 (fixed)
   * current() is marked as deprecated (but it is still functional), use getCurrent()
 * 1.8.2 2023-09-16
   * solved a psr-4 problem in composer.json

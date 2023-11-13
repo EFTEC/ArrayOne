@@ -62,7 +62,17 @@ class ArrayOneTest extends TestCase
             ->all();
         $this->assertEquals(['id' => 1, 'customer' => 10, 'detail' => ['unitPrice' => 800, 'quantity' => 12]], $arr);
     }
-
+    public function testRowToValue():void {
+        $array=[
+            ['a'=>1,'b'=>2,'c'=>3],
+            ['a'=>2,'b'=>3,'c'=>3],
+            ['a'=>3,'b'=>4,'c'=>4],
+            ['a'=>4,'b'=>5,'c'=>4],
+            '333'
+        ];
+        $this->assertEquals([1,2,3,4,null], ArrayOne::set($array)->rowToValue('a',true)->all());
+        $this->assertEquals([1,2,3,4], ArrayOne::set($array)->rowToValue('a')->all());
+    }
     public function testJson(): void
     {
         $json = '{"a":3,"b":[1,2,3]}';
