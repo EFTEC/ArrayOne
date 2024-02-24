@@ -28,24 +28,25 @@ class ServiceClass
 
 class ArrayOneTest extends TestCase
 {
-    public function testVersion():void
+    public function testVersion(): void
     {
         $version = (new ArrayOne([]))->getVersion();
         $this->assertNotEmpty($version);
     }
-    public function testAsArray():void
+
+    public function testAsArray(): void
     {
-        $values=[           ['idproduct' => 1, 'unitPrice' => 200, 'quantity' => 3],
+        $values = [['idproduct' => 1, 'unitPrice' => 200, 'quantity' => 3],
             ['idproduct' => 2, 'unitPrice' => 300, 'quantity' => 4],
             ['idproduct' => 3, 'unitPrice' => 300, 'quantity' => 5]];
-        $this->assertEquals(['idproduct' => 1, 'unitPrice' => 200, 'quantity' => 3],ArrayOne::set($values)[0]);
-        foreach(ArrayOne::set($values) as $v) {
+        $this->assertEquals(['idproduct' => 1, 'unitPrice' => 200, 'quantity' => 3], ArrayOne::set($values)[0]);
+        foreach (ArrayOne::set($values) as $v) {
             var_dump($v);
         }
     }
+
     public function test1(): void
     {
-
         $invoice = [
             'id' => 1,
             'customer' => 10,
@@ -62,49 +63,52 @@ class ArrayOneTest extends TestCase
             ->all();
         $this->assertEquals(['id' => 1, 'customer' => 10, 'detail' => ['unitPrice' => 800, 'quantity' => 12]], $arr);
     }
-    public function testRowToValue():void {
-        $array=[
-            ['a'=>1,'b'=>2,'c'=>3],
-            ['a'=>2,'b'=>3,'c'=>3],
-            ['a'=>3,'b'=>4,'c'=>4],
-            ['a'=>4,'b'=>5,'c'=>4],
+
+    public function testRowToValue(): void
+    {
+        $array = [
+            ['a' => 1, 'b' => 2, 'c' => 3],
+            ['a' => 2, 'b' => 3, 'c' => 3],
+            ['a' => 3, 'b' => 4, 'c' => 4],
+            ['a' => 4, 'b' => 5, 'c' => 4],
             '333'
         ];
-        $this->assertEquals([1,2,3,4,null], ArrayOne::set($array)->rowToValue('a',true)->all());
-        $this->assertEquals([1,2,3,4], ArrayOne::set($array)->rowToValue('a')->all());
+        $this->assertEquals([1, 2, 3, 4, null], ArrayOne::set($array)->rowToValue('a', true)->all());
+        $this->assertEquals([1, 2, 3, 4], ArrayOne::set($array)->rowToValue('a')->all());
     }
+
     public function testJson(): void
     {
         $json = '{"a":3,"b":[1,2,3]}';
         $this->assertEquals(['a' => 3, 'b' => [1, 2, 3]], ArrayOne::setJson($json)->all());
     }
+
     public function testDuplicate(): void
     {
-        $array=[
-            ['a'=>1,'b'=>2,'c'=>3],
-            ['a'=>2,'b'=>3,'c'=>3],
-            ['a'=>3,'b'=>4,'c'=>4],
-            ['a'=>4,'b'=>5,'c'=>4],
+        $array = [
+            ['a' => 1, 'b' => 2, 'c' => 3],
+            ['a' => 2, 'b' => 3, 'c' => 3],
+            ['a' => 3, 'b' => 4, 'c' => 4],
+            ['a' => 4, 'b' => 5, 'c' => 4],
             '333'
         ];
-        $r=ArrayOne::set($array)->removeDuplicate('c')->all();
-        $result=array (
+        $r = ArrayOne::set($array)->removeDuplicate('c')->all();
+        $result = [
             0 =>
-                array (
+                [
                     'a' => 1,
                     'b' => 2,
                     'c' => 3,
-                ),
+                ],
             2 =>
-                array (
+                [
                     'a' => 3,
                     'b' => 4,
                     'c' => 4,
-                ),
+                ],
             4 => '333',
-        );
-        $this->assertEquals($result,$r);
-
+        ];
+        $this->assertEquals($result, $r);
     }
 
     public function testValidateExample(): void
@@ -144,7 +148,7 @@ class ArrayOneTest extends TestCase
                         ['idproductx' => 'int', 'unitPrice' => 'int', 'quantity' => 'int',],
                     2 =>
                         ['idproducty' => 'int', 'unitPrice' => 'int', 'quantity' => 'int',],
-                    3=>'int'
+                    3 => 'int'
                 ],
         ];
         $this->assertEquals($expected, $r);
@@ -235,14 +239,14 @@ class ArrayOneTest extends TestCase
                 'b' => 'xxx',
                 'c' => '22222222',
                 'value' => ['a' => 111, 'b' => 'c', 'c' => 'ddd'],
-                'table' => [['col1' => 122, 'col2' => 2], ['col1' => 133, 'col2' => 2],3],
+                'table' => [['col1' => 122, 'col2' => 2], ['col1' => 133, 'col2' => 2], 3],
             ]);
         $expected = [
             'a' => 'post',
             'b' => 'post',
             'c' => 'post',
             'value' =>
-                ['a' => 'post', 'b' =>'post', 'c' => 'post',],
+                ['a' => 'post', 'b' => 'post', 'c' => 'post',],
             'table' => [0 =>
                 [
                     'col1' => 'post',
@@ -305,7 +309,7 @@ class ArrayOneTest extends TestCase
                 ['unitPrice' => 300, 'quantity' => 5]
             ]
         ];
-        $this->assertEquals($result, ArrayOne::set($invoice)->mask($mask)->all());
+        $this->assertEquals($result, ArrayOne::set($invoice)->mask($mask)->getAll());
     }
 
     public function testValidate2(): void
@@ -358,7 +362,20 @@ class ArrayOneTest extends TestCase
             'fnotin' => 'fnotin is in list',
         ];
         $service = new ServiceClass();
-        $run = ArrayOne::set($array, ServiceClass::class)->validate($validate, true)->all();
+        $val = ArrayOne::set($array, ServiceClass::class)->validate($validate, true);
+        $run = $val->all();
+        $this->assertEquals(false, $val->isValid());
+        $this->assertEquals([
+            'fbetween' => 'fbetween is not between 1 and 3',
+            0 => '0 is not an integer',
+            'fnull' => 'fnull is not null',
+            'fmissing' => 'fiend fmissing not found',
+            'fcustomtext' => 'it is a custom text field:fcustomtext; comp:xxx; value:bbbb; first:; second:; rowid:',
+            'f7' => 'f7 is not a string',
+            'fservicefunction' => 'custommsg',
+            'fin2' => 'fin2 is not in list',
+            'fnotin' => 'fnotin is in list',
+        ], $val->errorStack);
         $this->assertEquals($expected, $run);
         $run = ArrayOne::set($array, $service)->validate($validate, true)->all();
         $this->assertEquals($expected, $run);
@@ -415,7 +432,7 @@ class ArrayOneTest extends TestCase
                             'price' => NULL,
                             'quantity' => NULL,
                         ],
-                    3=>null
+                    3 => null
                 ],
             'types' =>
                 [
@@ -491,38 +508,42 @@ class ArrayOneTest extends TestCase
                 'col_stack' => 'stack(cat)',
                 'col_min2' => 'min(col_min)',
                 'col_max' => 'max',
-                'col_sum'=>'sum',
+                'col_sum' => 'sum',
                 'col_avg' => 'avg',
                 'col_count' => 'count',
                 'col_first' => 'first',
                 'col_last' => 'last',
-                'col_sum2'=>static function($cumulate,$row) {
-                    return $cumulate+($row['col_sum']/2);
+                'col_sum2' => static function($cumulate, $row) {
+                    return $cumulate + ($row['col_sum'] / 2);
                 },
-                'col_sum3'=>[
-                    static function($cumulate,$row) {return $cumulate+($row['col_sum']/2);},
-                    static function($cumulate,$numRow) {return $cumulate/$numRow;},
+                'col_sum3' => [
+                    static function($cumulate, $row) {
+                        return $cumulate + ($row['col_sum'] / 2);
+                    },
+                    static function($cumulate, $numRow) {
+                        return $cumulate / $numRow;
+                    },
                 ],
             ])
             ->all();
         $expected = [
             'cat1' =>
-                ['col_min2' => 1, 'col_max' => 4, 'col_sum' => 5, 'col_avg' => 2.5, 'col_first' => 'john1', 'col_last' => 'doe4', 'col_count' => 2,'col_sum2'=>2.5,'col_sum3'=>1.25,
-                    'col_stack'=>[
+                ['col_min2' => 1, 'col_max' => 4, 'col_sum' => 5, 'col_avg' => 2.5, 'col_first' => 'john1', 'col_last' => 'doe4', 'col_count' => 2, 'col_sum2' => 2.5, 'col_sum3' => 1.25,
+                    'col_stack' => [
                         ['cat' => 'cat1', 'col_min' => 1, 'col_max' => 1, 'col_sum' => 1, 'col_avg' => 1, 'col_first' => 'john1', 'col_last' => 'doe1']
-                        ,['cat' => 'cat1', 'col_min' => 4, 'col_max' => 4, 'col_sum' => 4, 'col_avg' => 4, 'col_first' => 'john4', 'col_last' => 'doe4'],]],
+                        , ['cat' => 'cat1', 'col_min' => 4, 'col_max' => 4, 'col_sum' => 4, 'col_avg' => 4, 'col_first' => 'john4', 'col_last' => 'doe4'],]],
             'cat2' =>
-                ['col_min2' => 2, 'col_max' => 5, 'col_sum' => 7, 'col_avg' => 3.5, 'col_first' => 'john2', 'col_last' => 'doe5', 'col_count' => 2,'col_sum2'=>3.5,'col_sum3'=>1.75,
-                    'col_stack'=>[['cat' => 'cat2', 'col_min' => 2, 'col_max' => 2, 'col_sum' => 2, 'col_avg' => 2, 'col_first' => 'john2', 'col_last' => 'doe2'],
+                ['col_min2' => 2, 'col_max' => 5, 'col_sum' => 7, 'col_avg' => 3.5, 'col_first' => 'john2', 'col_last' => 'doe5', 'col_count' => 2, 'col_sum2' => 3.5, 'col_sum3' => 1.75,
+                    'col_stack' => [['cat' => 'cat2', 'col_min' => 2, 'col_max' => 2, 'col_sum' => 2, 'col_avg' => 2, 'col_first' => 'john2', 'col_last' => 'doe2'],
                         ['cat' => 'cat2', 'col_min' => 5, 'col_max' => 5, 'col_sum' => 5, 'col_avg' => 5, 'col_first' => 'john5', 'col_last' => 'doe5']]],
             'cat3' =>
-                ['col_min2' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3', 'col_count' => 1,'col_sum2'=>1.5,'col_sum3'=>1.5,
-                    'col_stack'=>[['cat' => 'cat3', 'col_min' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3'],]],
+                ['col_min2' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3', 'col_count' => 1, 'col_sum2' => 1.5, 'col_sum3' => 1.5,
+                    'col_stack' => [['cat' => 'cat3', 'col_min' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3'],]],
         ];
         $this->assertEquals($expected, $result);
         $result = ArrayOne::set($array)
             ->group('cat', [
-                'groupby'=>'group',
+                'groupby' => 'group',
                 'col_stack' => 'stack(cat)',
                 'col_min2' => 'min(col_min)',
                 'col_max' => 'max',
@@ -531,22 +552,18 @@ class ArrayOneTest extends TestCase
                 'col_count' => 'count',
                 'col_first' => 'first',
                 'col_last' => 'last'
-
-            ],false)
+            ], false)
             ->all();
         $expected = [
-
-            ['groupby'=>'cat1','col_min2' => 1, 'col_max' => 4, 'col_sum' => 5, 'col_avg' => 2.5, 'col_first' => 'john1', 'col_last' => 'doe4', 'col_count' => 2,
-                'col_stack'=>[
+            ['groupby' => 'cat1', 'col_min2' => 1, 'col_max' => 4, 'col_sum' => 5, 'col_avg' => 2.5, 'col_first' => 'john1', 'col_last' => 'doe4', 'col_count' => 2,
+                'col_stack' => [
                     ['cat' => 'cat1', 'col_min' => 1, 'col_max' => 1, 'col_sum' => 1, 'col_avg' => 1, 'col_first' => 'john1', 'col_last' => 'doe1']
-                    ,['cat' => 'cat1', 'col_min' => 4, 'col_max' => 4, 'col_sum' => 4, 'col_avg' => 4, 'col_first' => 'john4', 'col_last' => 'doe4'],]],
-
-            ['groupby'=>'cat2','col_min2' => 2, 'col_max' => 5, 'col_sum' => 7, 'col_avg' => 3.5, 'col_first' => 'john2', 'col_last' => 'doe5', 'col_count' => 2,
-                'col_stack'=>[['cat' => 'cat2', 'col_min' => 2, 'col_max' => 2, 'col_sum' => 2, 'col_avg' => 2, 'col_first' => 'john2', 'col_last' => 'doe2'],
+                    , ['cat' => 'cat1', 'col_min' => 4, 'col_max' => 4, 'col_sum' => 4, 'col_avg' => 4, 'col_first' => 'john4', 'col_last' => 'doe4'],]],
+            ['groupby' => 'cat2', 'col_min2' => 2, 'col_max' => 5, 'col_sum' => 7, 'col_avg' => 3.5, 'col_first' => 'john2', 'col_last' => 'doe5', 'col_count' => 2,
+                'col_stack' => [['cat' => 'cat2', 'col_min' => 2, 'col_max' => 2, 'col_sum' => 2, 'col_avg' => 2, 'col_first' => 'john2', 'col_last' => 'doe2'],
                     ['cat' => 'cat2', 'col_min' => 5, 'col_max' => 5, 'col_sum' => 5, 'col_avg' => 5, 'col_first' => 'john5', 'col_last' => 'doe5']]],
-
-            ['groupby'=>'cat3','col_min2' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3', 'col_count' => 1,
-                'col_stack'=>[['cat' => 'cat3', 'col_min' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3'],]],
+            ['groupby' => 'cat3', 'col_min2' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3', 'col_count' => 1,
+                'col_stack' => [['cat' => 'cat3', 'col_min' => 3, 'col_max' => 3, 'col_sum' => 3, 'col_avg' => 3, 'col_first' => 'john3', 'col_last' => 'doe3'],]],
         ];
         $this->assertEquals($expected, $result);
     }
@@ -615,10 +632,11 @@ class ArrayOneTest extends TestCase
         $types = [['name' => 'type1', 'desc' => 'it is the type #1'], ['name' => 'type2', 'desc' => 'it is the type #2']];
         $this->assertEquals($arrayExpected, ArrayOne::set($array)->nav('products')->join($types, 'type', 'name')->all());
     }
-    public function testIndexToCol():void
+
+    public function testIndexToCol(): void
     {
-        $array=[1,2,3,'nav'=>['c'=>[1,2,3],'d'=>[1,2,3]]];
-        $r=ArrayOne::set($array)->nav('nav')->indexToCol('col1')->all();
+        $array = [1, 2, 3, 'nav' => ['c' => [1, 2, 3], 'd' => [1, 2, 3]]];
+        $r = ArrayOne::set($array)->nav('nav')->indexToCol('col1')->all();
         //var_export($r);
         $this->assertEquals([0 => 1, 1 => 2, 2 => 3, 'nav' =>
             [
@@ -626,7 +644,7 @@ class ArrayOneTest extends TestCase
                     [0 => 1, 1 => 2, 2 => 3, 'col1' => 'c',],
                 1 =>
                     [0 => 1, 1 => 2, 2 => 3, 'col1' => 'd',],
-            ],],$r);
+            ],], $r);
     }
 
     public function test2(): void
@@ -663,142 +681,144 @@ class ArrayOneTest extends TestCase
             'price' => 600,
             'quantity' => 300], $r);
     }
-    public function testValidationFull():void {
-        $array=['contain like'=>"helloworld",
-            'alpha'=>"hello",
-            'alphanumunder'=>"hello_33",
-            'alphanum'=>"hello33",
-            'text'=>"hello",
-            'regexp'=>"abc123",
-            'email'=>"aaa@bbb.com",
-            'url'=>"https://www.nic.cl",
-            'domain'=>"www.nic.cl",
-            'minlen'=>"hello",
-            'maxlen'=>"h",
-            'betweenlen'=>"hello",
-            'exist'=>"hi",
-            'missing'=>null,
-            'req,required'=>"hi",
-            'eq =='=>1,
-            'ne != <>'=>1,
-            'null'=>null,
-            'empty'=>"",
-            'lt'=>1,
-            'lte'=>1,
-            'gt'=>10,
-            'gte'=>10,
-            'between'=>5,
-            'true'=>true,
-            'false'=>false,
-            'array'=>[1,2,3],
-            'int'=>1,
-            'string'=>"hello",
-            'float'=>333.3,
-            'object'=>new stdClass(),
-            'in'=>"a",
+
+    public function testValidationFull(): void
+    {
+        $array = ['contain like' => "helloworld",
+            'alpha' => "hello",
+            'alphanumunder' => "hello_33",
+            'alphanum' => "hello33",
+            'text' => "hello",
+            'regexp' => "abc123",
+            'email' => "aaa@bbb.com",
+            'url' => "https://www.nic.cl",
+            'domain' => "www.nic.cl",
+            'minlen' => "hello",
+            'maxlen' => "h",
+            'betweenlen' => "hello",
+            'exist' => "hi",
+            'missing' => null,
+            'req,required' => "hi",
+            'eq ==' => 1,
+            'ne != <>' => 1,
+            'null' => null,
+            'empty' => "",
+            'lt' => 1,
+            'lte' => 1,
+            'gt' => 10,
+            'gte' => 10,
+            'between' => 5,
+            'true' => true,
+            'false' => false,
+            'array' => [1, 2, 3],
+            'int' => 1,
+            'string' => "hello",
+            'float' => 333.3,
+            'object' => new stdClass(),
+            'in' => "a",
         ];
-        $arrayError=['contain like'=>"hello",
-            'alpha'=>"hello33",
-            'alphanumunder'=>"hello!33",
-            'alphanum'=>"hello!33",
-            'text'=>[1],
-            'regexp'=>"xyz123",
-            'email'=>"aaa.bbb.com",
-            'url'=>"aaaa",
-            'domain'=>"....",
-            'minlen'=>"h",
-            'maxlen'=>"hello",
-            'betweenlen'=>"h",
-            'exist'=>null,
-            'missing'=>"hi",
-            'req,required'=>null,
-            'eq =='=>0,
-            'ne != <>'=>0,
-            'null'=>"hello",
-            'empty'=>"hello",
-            'lt'=>10,
-            'lte'=>10,
-            'gt'=>1,
-            'gte'=>1,
-            'between'=>0,
-            'true'=>false,
-            'false'=>true,
-            'array'=>1,
-            'int'=>"hello",
-            'string'=>true,
-            'float'=>"hello",
-            'object'=>1,
-            'in'=>"x",
+        $arrayError = ['contain like' => "hello",
+            'alpha' => "hello33",
+            'alphanumunder' => "hello!33",
+            'alphanum' => "hello!33",
+            'text' => [1],
+            'regexp' => "xyz123",
+            'email' => "aaa.bbb.com",
+            'url' => "aaaa",
+            'domain' => "....",
+            'minlen' => "h",
+            'maxlen' => "hello",
+            'betweenlen' => "h",
+            'exist' => null,
+            'missing' => "hi",
+            'req,required' => null,
+            'eq ==' => 0,
+            'ne != <>' => 0,
+            'null' => "hello",
+            'empty' => "hello",
+            'lt' => 10,
+            'lte' => 10,
+            'gt' => 1,
+            'gte' => 1,
+            'between' => 0,
+            'true' => false,
+            'false' => true,
+            'array' => 1,
+            'int' => "hello",
+            'string' => true,
+            'float' => "hello",
+            'object' => 1,
+            'in' => "x",
         ];
-        $validationArray=[
-            'contain like'=>'contain;world',
-            'alpha'=>'alpha',
-            'alphanumunder'=>'alphanumunder',
-            'alphanum'=>'alphanum',
-            'text'=>'text',
-            'regexp'=>'regexp;/abc*/',
-            'email'=>'email',
-            'url'=>'url',
-            'domain'=>'domain',
-            'minlen'=>'minlen;3',
-            'maxlen'=>'maxlen;3',
-            'betweenlen'=>'betweenlen;4,5',
-            'exist'=>'exist',
-            'missing'=>'missing',
-            'req,required'=>'req',
-            'eq =='=>'eq;1',
-            'ne != <>'=>'ne;0',
-            'null'=>'null',
-            'empty'=>'empty',
-            'lt'=>'lt;5',
-            'lte'=>'lte;5',
-            'gt'=>'gt;5',
-            'gte'=>'gte;5',
-            'between'=>'between;4,5',
-            'true'=>'true',
-            'false'=>'false',
-            'array'=>'array',
-            'int'=>'int',
-            'string'=>'string',
-            'float'=>'float',
-            'object'=>'object',
-            'in'=>'in;a,b,c',
+        $validationArray = [
+            'contain like' => 'contain;world',
+            'alpha' => 'alpha',
+            'alphanumunder' => 'alphanumunder',
+            'alphanum' => 'alphanum',
+            'text' => 'text',
+            'regexp' => 'regexp;/abc*/',
+            'email' => 'email',
+            'url' => 'url',
+            'domain' => 'domain',
+            'minlen' => 'minlen;3',
+            'maxlen' => 'maxlen;3',
+            'betweenlen' => 'betweenlen;4,5',
+            'exist' => 'exist',
+            'missing' => 'missing',
+            'req,required' => 'req',
+            'eq ==' => 'eq;1',
+            'ne != <>' => 'ne;0',
+            'null' => 'null',
+            'empty' => 'empty',
+            'lt' => 'lt;5',
+            'lte' => 'lte;5',
+            'gt' => 'gt;5',
+            'gte' => 'gte;5',
+            'between' => 'between;4,5',
+            'true' => 'true',
+            'false' => 'false',
+            'array' => 'array',
+            'int' => 'int',
+            'string' => 'string',
+            'float' => 'float',
+            'object' => 'object',
+            'in' => 'in;a,b,c',
         ];
-        $validationArrayNeg=[
-            'contain like'=>'notcontain;world',
-            'alpha'=>'notalpha',
-            'alphanumunder'=>'notalphanumunder',
-            'alphanum'=>'notalphanum',
-            'text'=>'nottext',
-            'regexp'=>'notregexp;/abc*/',
-            'email'=>'notemail',
-            'url'=>'noturl',
-            'domain'=>'notdomain',
-            'minlen'=>'notminlen;3',
-            'maxlen'=>'notmaxlen;3',
-            'betweenlen'=>'notbetweenlen;4,5',
-            'exist'=>'notexist',
-            'missing'=>'notmissing',
-            'req,required'=>'notreq',
-            'eq =='=>'noteq;1',
-            'ne != <>'=>'notne;0',
-            'null'=>'notnull',
-            'empty'=>'notempty',
-            'lt'=>'notlt;5',
-            'lte'=>'notlte;5',
-            'gt'=>'notgt;5',
-            'gte'=>'notgte;5',
-            'between'=>'notbetween;4,5',
-            'true'=>'nottrue',
-            'false'=>'notfalse',
-            'array'=>'notarray',
-            'int'=>'notint',
-            'string'=>'notstring',
-            'float'=>'notfloat',
-            'object'=>'notobject',
-            'in'=>'notin;a,b,c',
+        $validationArrayNeg = [
+            'contain like' => 'notcontain;world',
+            'alpha' => 'notalpha',
+            'alphanumunder' => 'notalphanumunder',
+            'alphanum' => 'notalphanum',
+            'text' => 'nottext',
+            'regexp' => 'notregexp;/abc*/',
+            'email' => 'notemail',
+            'url' => 'noturl',
+            'domain' => 'notdomain',
+            'minlen' => 'notminlen;3',
+            'maxlen' => 'notmaxlen;3',
+            'betweenlen' => 'notbetweenlen;4,5',
+            'exist' => 'notexist',
+            'missing' => 'notmissing',
+            'req,required' => 'notreq',
+            'eq ==' => 'noteq;1',
+            'ne != <>' => 'notne;0',
+            'null' => 'notnull',
+            'empty' => 'notempty',
+            'lt' => 'notlt;5',
+            'lte' => 'notlte;5',
+            'gt' => 'notgt;5',
+            'gte' => 'notgte;5',
+            'between' => 'notbetween;4,5',
+            'true' => 'nottrue',
+            'false' => 'notfalse',
+            'array' => 'notarray',
+            'int' => 'notint',
+            'string' => 'notstring',
+            'float' => 'notfloat',
+            'object' => 'notobject',
+            'in' => 'notin;a,b,c',
         ];
-        $expectedOK=array (
+        $expectedOK = [
             'contain like' => NULL,
             'alpha' => NULL,
             'alphanumunder' => NULL,
@@ -831,8 +851,8 @@ class ArrayOneTest extends TestCase
             'float' => NULL,
             'object' => NULL,
             'in' => NULL,
-        );
-        $expectedERROR=array (
+        ];
+        $expectedERROR = [
             'contain like' => 'contain like contains world',
             'alpha' => 'alpha is not alphabetic',
             'alphanumunder' => 'alphanumunder is not alphanumeric with underscore',
@@ -865,8 +885,8 @@ class ArrayOneTest extends TestCase
             'float' => 'float is not a float',
             'object' => 'object is not an object',
             'in' => 'in is not in list',
-        );
-        $expectedNEG=array (
+        ];
+        $expectedNEG = [
             'contain like' => 'contain like does not contains world',
             'alpha' => 'alpha is alphabetic',
             'alphanumunder' => 'alphanumunder is alphanumeric with underscore',
@@ -899,16 +919,13 @@ class ArrayOneTest extends TestCase
             'float' => 'float is a float',
             'object' => 'object is an object',
             'in' => 'in is in list',
-        );
-
-        $final=ArrayOne::set($array)->validate($validationArray)->all();
-        $this->assertEquals($expectedOK,$final);
-        $final=ArrayOne::set($arrayError)->validate($validationArray)->all();
-        $this->assertEquals($expectedERROR,$final);
-        $final=ArrayOne::set($array)->validate($validationArrayNeg)->all();
-        $this->assertEquals($expectedNEG,$final);
-
-
+        ];
+        $final = ArrayOne::set($array)->validate($validationArray)->all();
+        $this->assertEquals($expectedOK, $final);
+        $final = ArrayOne::set($arrayError)->validate($validationArray)->all();
+        $this->assertEquals($expectedERROR, $final);
+        $final = ArrayOne::set($array)->validate($validationArrayNeg)->all();
+        $this->assertEquals($expectedNEG, $final);
     }
 
     public function testfilter(): void

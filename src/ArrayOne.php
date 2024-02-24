@@ -17,7 +17,7 @@ use RuntimeException;
  */
 class ArrayOne implements ArrayAccess
 {
-    public const VERSION = "1.9";
+    public const VERSION = "1.10";
     /** @var array|null */
     protected $array;
     protected $serviceObject;
@@ -25,6 +25,7 @@ class ArrayOne implements ArrayAccess
     protected $currentArray;
     protected $curNav;
     public static $error = '';
+    public $errorStack=[];
 
     /**
      * Constructor<br/>
@@ -308,6 +309,17 @@ class ArrayOne implements ArrayAccess
     {
         $this->setCurrentArray();
         return $this->array;
+    }
+    /**
+     * Clone of a(). This method returns the whole array transformed and not only the current navigation.<br/>
+     * **Example:**<br/>
+     * ```php
+     * $this->set($array)->nav('field')->getAll();
+     * ```
+     */
+    public function getAll():?array
+    {
+        return $this->all();
     }
 
     /**
@@ -1477,13 +1489,16 @@ class ArrayOne implements ArrayAccess
 
     /**
      * Validate the current array using a comparison table<br/>
+     * It returns an associative array with null in the fields without error, or other value if error.
      * **Example:**<br/>
      * ```php
-     * $this->validate([
+     * $this->set($arr)
+     *      ->validate([
      *          'id'=>'int',
      *          'table'=>[['col1'=>'int','col2'=>'string']],   // note the double [[ ]] to indicate a table of values
      *          'list'=>[['int']]
-     *     ]);
+     *     ])
+     *     ->all();
      * ```
      * @param array $comparisonTable <br/>
      *                               <b>not-valid-</b> : negates an validation, example "notint"<br/>
@@ -1498,7 +1513,7 @@ class ArrayOne implements ArrayAccess
      *                               <b>regexp</b> :if the value match a regular expression<br/>
      *                               <b>email</b> :if the value is an email<br/>
      *                               <b>url</b> :if the value is an url<br/>
-     *                               <b>domain</b> :if the value is a domain<br/>
+     *                               <b>domain</b> :if the value is a web domain<br/>
      *                               <b>minlen</b> :the value must have a minimum lenght<br/>
      *                               <b>maxlen</b> :the value must have a maximum lenght<br/>
      *                               <b>betweenlen</b> :if the value has a size between<br/>
@@ -1574,7 +1589,7 @@ class ArrayOne implements ArrayAccess
                     foreach ($vparts as $vpart) {
                         $fragment = explode(';', $vpart, 3);
                         $type = $fragment[0];
-                        $compValue = $fragment[1] ?? null;
+                        $compValue = $fragment[1] ?? '';
                         if (strpos($compValue, ',') !== false) {
                             $compValue = explode(',', $compValue);
                         }
@@ -1604,8 +1619,12 @@ class ArrayOne implements ArrayAccess
                             $msg = null;
                         }
                         if (isset($final[$field])) {
+                            $this->errorStack[$field].= '|' . $msg;
                             $final[$field] .= '|' . $msg;
                         } else {
+                            if($msg!==null) {
+                                $this->errorStack[$field] = $msg;
+                            }
                             $final[$field] = $msg;
                         }
                     }
@@ -1613,12 +1632,16 @@ class ArrayOne implements ArrayAccess
             } else {
                 // is a field that is not part of the comparison.
                 $final[$field] = $extraFieldError ? "fiend $field not found" : null;
+                $this->errorStack[$field] = $final[$field];
             }
         }
         if ($up) {
             $final = $final[0];
         }
         return $final;
+    }
+    public function isValid():bool {
+        return count($this->errorStack)===0;
     }
 
     /**
@@ -1706,6 +1729,7 @@ class ArrayOne implements ArrayAccess
      * ```
      * @param mixed $offset
      * @return mixed|null
+     * @noinspection PhpFullyQualifiedNameUsageInspection
      */
     #[\ReturnTypeWillChange]
     public function offsetGet($offset) {

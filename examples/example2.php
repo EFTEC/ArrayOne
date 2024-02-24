@@ -60,5 +60,5 @@ $top = [
 use eftec\ArrayOne;
 
 include __DIR__.'/../vendor/autoload.php';
-$result=ArrayOne::set($top)->nav('topping')->reduce(['id'=>'count'])->current();
+$result=ArrayOne::set($top)->nav('topping')->reduce(['id'=>'count'])->getCurrent();
 var_dump($result);

@@ -15,7 +15,7 @@ What it does? Filter, order, renaming column, grouping, validating, amongst many
 
 [![Packagist](https://img.shields.io/packagist/v/eftec/ArrayOne.svg)](https://packagist.org/packages/eftec/ArrayOne)
 [![Total Downloads](https://poser.pugx.org/eftec/ArrayOne/downloads)](https://packagist.org/packages/eftec/ArrayOne)
-[![Maintenance](https://img.shields.io/maintenance/yes/2023.svg)]()
+[![Maintenance](https://img.shields.io/maintenance/yes/2024.svg)]()
 [![composer](https://img.shields.io/badge/composer-%3E1.6-blue.svg)]()
 [![php](https://img.shields.io/badge/php-7.1-green.svg)]()
 [![php](https://img.shields.io/badge/php-8.x-green.svg)]()
@@ -58,8 +58,8 @@ What it does? Filter, order, renaming column, grouping, validating, amongst many
     * [createValidateExample](#createvalidateexample)
     * [validate](#validate)
   * [end operators](#end-operators)
-    * [all](#all)
-    * [result](#result)
+    * [getAll](#getall)
+    * [getCurrent()](#getcurrent)
   * [other methods](#other-methods)
     * [makeValidateArrayByExample](#makevalidatearraybyexample)
     * [makeRequestArrayByExample](#makerequestarraybyexample)
@@ -234,11 +234,19 @@ The indexes are not rebuilt.
 **Example:**
 ```php
 $array = [['id' => 1, 'name' => 'chile'], ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']];
-// ['id' => 2, 'name' => 'argentina']
-$r = ArrayOne::set($array)->filter(function($id, $row) {return $row['id'] === 2;}, true)->getCurrent();
-// [1=>['id' => 2, 'name' => 'argentina']]
-$r = ArrayOne::set($array)->filter(function($id, $row) {return $row['id'] === 2;}, false)->getCurrent();
+// get the row #2 "argentina":
+// using a function:
+$r = ArrayOne::set($array)->filter(function($row, $id) {return $row['id'] === 2;}, true)->result();
+// using a function a returning a flat result:
+$r = ArrayOne::set($array)->filter(function($row, $id) {return $row['id'] === 2;}, false)->result();
+// using an associative array:
+$r = ArrayOne::set($array)->filter(['id'=>'eq;2'], false)->result();
+// using an associative array that contains an array:
+$r = ArrayOne::set($array)->filter(['id'=>['eq,2], false)->result();
 ```
+> Note: see [validate](#validate) for more information about conditions.
+
+
 ### first
 It returns the first element of an array.
 * **return value** $this
@@ -473,12 +481,16 @@ It creates a validation array using an example
 Validate the current array using a comparison table   
 **Example:**
 ```php
-$this->validate([
+$valid=$this->set($array)->validate([
          'id'=>'int',
     	 'price'=>'int|between;1,20'   // the price must be an integer and it must be between 1 and 20 (including them).
          'table'=>[['col1'=>'int';'col2'=>'string|notnull,,the value is required|']],   // note the double [[ ]] to indicate a table of values
          'list'=>[['int']]
     ]);
+$valid->all(); // it gets an associative array with all the errors (or null if not error)
+$valid->flat()->all(); // if you want a flat result.
+$valid->errorStack; // it gets an associative array with only the errors. If nested array, then some values could be overriden.
+$valid->isValid(); // returns true if the validation passes, otherwise, it returns false.
 ```
 **Example Using a custom function:**
 ```php
@@ -556,16 +568,29 @@ ValidateOne
   it returns an error.
 
 ## end operators
-### all
+### getAll()
 Returns the whole array transformed. If you want the current navigation then use current()
 
 **Example:**
 ```php
-$this->set($array)->nav('field')->all();
+$this->set($array)->nav('field')->getAll();
 ```
-### result
+### getCurrent()
 
 Returns the result indicated by nav(). If you want to return the whole array, then use all()
+
+### isValid()
+returns true if the validation has no error.
+
+**Example:**
+```php
+if ($this->set($array)->valid($arrayComparison)->isValid()) {
+  // do something.
+}
+```
+
+> Note: you can also obtain the result of the validation: ->valid($arrayc)->all();  
+> Note2: If you want a simple array with errors, you can use $this::errorStack;
 
 **Example:** 
 ```php
@@ -598,6 +623,10 @@ $this->makeRequestArrayByExample(['a'=1,'b'=>2]); // ['a'='post','b'=>'post'];
 
 
 ## versions
+* 1.10 2024-02-24
+  * Added more doc for validate()
+  * Now validate also returns an array $this::$errorStack
+  * New method isValid() which returns true is validate has no error. Otherwise false.
 * 1.9 2023-11-13
   * added rowToValue() 
 * 1.8.3 2023-09-16 
@@ -640,7 +669,7 @@ $this->makeRequestArrayByExample(['a'=1,'b'=>2]); // ['a'='post','b'=>'post'];
 
 ## License
 
-Copyright Jorge Castro Castillo 2023.
+Copyright Jorge Castro Castillo 2023-2024.
 Licensed under dual license: LGPL-3.0 and commercial license.
 
 In short:
