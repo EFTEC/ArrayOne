@@ -58,8 +58,9 @@ What it does? Filter, order, renaming column, grouping, validating, amongst many
     * [createValidateExample](#createvalidateexample)
     * [validate](#validate)
   * [end operators](#end-operators)
-    * [getAll](#getall)
+    * [getAll()](#getall)
     * [getCurrent()](#getcurrent)
+    * [isValid()](#isvalid)
   * [other methods](#other-methods)
     * [makeValidateArrayByExample](#makevalidatearraybyexample)
     * [makeRequestArrayByExample](#makerequestarraybyexample)
@@ -82,6 +83,11 @@ $invoice=[
     ]
 ];
 $arr=ArrayOne::set($invoice)
+    ->nav('detail')
+    ->reduce(['unitPrice'=>'sum','quantity'=>'sum'])
+    ->getCurrent(); //['unitPrice'=>800,'quanty'=>12]
+// or also
+$arr=(new ArrayOne($invoice))
     ->nav('detail')
     ->reduce(['unitPrice'=>'sum','quantity'=>'sum'])
     ->getCurrent(); //['unitPrice'=>800,'quanty'=>12]
