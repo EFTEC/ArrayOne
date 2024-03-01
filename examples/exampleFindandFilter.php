@@ -1,4 +1,6 @@
-<?php /** @noinspection ForgottenDebugOutputInspection */
+<?php /** @noinspection ForgottenDebugOutputInspection
+ * @noinspection UnknownInspectionInspection
+ */
 
 use eftec\ArrayOne;
 
@@ -17,7 +19,7 @@ var_dump(ArrayOne::isIndexTableArray($values));
 echo "<h1>returning all the fruits with price greater or equals than 200</h1>";
 var_dump(ArrayOne::set($values)->filter([['type'=>'eq;fruit'],['price'=>'ge;200']])->getCurrent());
 echo "<h1>returning all the fruits with price greater or equals than 200 using a function<h1></h1>";
-var_dump(ArrayOne::set($values)->filter(static function($row,$id) {
+var_dump(ArrayOne::set($values)->filter(static function($row) {
     return $row['type']==='fruit' && $row['price']>=200;
     })->getCurrent());
 

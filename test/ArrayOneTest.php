@@ -40,9 +40,7 @@ class ArrayOneTest extends TestCase
             ['idproduct' => 2, 'unitPrice' => 300, 'quantity' => 4],
             ['idproduct' => 3, 'unitPrice' => 300, 'quantity' => 5]];
         $this->assertEquals(['idproduct' => 1, 'unitPrice' => 200, 'quantity' => 3], ArrayOne::set($values)[0]);
-        foreach (ArrayOne::set($values) as $v) {
-            var_dump($v);
-        }
+
     }
 
     public function test1(): void
@@ -939,31 +937,32 @@ class ArrayOneTest extends TestCase
             return $row['id'] === 2;
         }, false)->getCurrent();
         $this->assertEquals([1 => ['id' => 2, 'name' => 'argentina']], $r);
-
     }
+
     public function testFind(): void
     {
         $array = [['id' => 1, 'name' => 'chile'], ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']];
         $r = ArrayOne::set($array)->find(function($row, $id) {
             return $row['id'] === 2;
         }, true)->getCurrent();
-        $this->assertEquals([1,['id' => 2, 'name' => 'argentina']], $r);
+        $this->assertEquals([1, ['id' => 2, 'name' => 'argentina']], $r);
         $r = ArrayOne::set($array)->find(function($row, $id) {
             return $row['id'] === 2;
         }, false)->getCurrent();
-        $this->assertEquals([1 => ['id' => 2, 'name' => 'argentina']], $r);
+        $this->assertEquals([[1, ['id' => 2, 'name' => 'argentina']]], $r);
     }
-    public function testIsIndexArray():void {
-        $this->assertTrue(ArrayOne::set(['cocacola','fanta'])->isIndex());
-        $this->assertFalse(ArrayOne::set(['cocacola','fanta'])->isIndexTable());
-        $this->assertTrue(ArrayOne::set([['cocacola','fanta']])->isIndexTable());
-        $this->assertTrue(ArrayOne::isIndexArray(['cocacola','fanta']));
-        $this->assertTrue(ArrayOne::isIndexTableArray([['cocacola','fanta']]));
-        $this->assertNotTrue(ArrayOne::isIndexTableArray(['cocacola','fanta']));
-        $this->assertNotTrue(ArrayOne::isIndexTableArray(['first'=>['hello'],'second'=>'world']));
-        $this->assertNotTrue(ArrayOne::isIndexArray(['prod1'=>'cocacola','prod2'=>'fanta']));
-        $this->assertNotTrue(ArrayOne::isIndexArray('cocacola'));
 
+    public function testIsIndexArray(): void
+    {
+        $this->assertTrue(ArrayOne::set(['cocacola', 'fanta'])->isIndex());
+        $this->assertFalse(ArrayOne::set(['cocacola', 'fanta'])->isIndexTable());
+        $this->assertTrue(ArrayOne::set([['cocacola', 'fanta']])->isIndexTable());
+        $this->assertTrue(ArrayOne::isIndexArray(['cocacola', 'fanta']));
+        $this->assertTrue(ArrayOne::isIndexTableArray([['cocacola', 'fanta']]));
+        $this->assertNotTrue(ArrayOne::isIndexTableArray(['cocacola', 'fanta']));
+        $this->assertNotTrue(ArrayOne::isIndexTableArray(['first' => ['hello'], 'second' => 'world']));
+        $this->assertNotTrue(ArrayOne::isIndexArray(['prod1' => 'cocacola', 'prod2' => 'fanta']));
+        $this->assertNotTrue(ArrayOne::isIndexArray('cocacola'));
     }
 
     public function testfilter2(): void
