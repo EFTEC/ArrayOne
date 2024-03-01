@@ -36,6 +36,9 @@ What it does? Filter, order, renaming column, grouping, validating, amongst many
     * [col](#col)
     * [columnToIndex](#columntoindex)
     * [filter](#filter)
+  * [find](#find)
+    * [isIndexArray() isIndex()](#isindexarray-isindex)
+  * [isIndexTableArray() isIndexTable()](#isindextablearray-isindextable)
     * [first](#first)
     * [flat](#flat)
     * [group](#group)
@@ -248,9 +251,53 @@ $r = ArrayOne::set($array)->filter(function($row, $id) {return $row['id'] === 2;
 // using an associative array:
 $r = ArrayOne::set($array)->filter(['id'=>'eq;2'], false)->result();
 // using an associative array that contains an array:
-$r = ArrayOne::set($array)->filter(['id'=>['eq,2], false)->result();
+$r = ArrayOne::set($array)->filter(['id'=>['eq,2]], false)->result();
+// multiples conditions: id=2 and col=10
+$r = ArrayOne::set($array)->filter([['id'=>'eq;2'],['col','eq;10]], false)->result();
 ```
+
+> You can find an example in [examplefindandfilter](/examples/exampleFindandFilter.php)
 > Note: see [validate](#validate) for more information about conditions.
+
+## find
+It returns an array with the key and values of the elements that matches the condition.<br>
+* **parameter** callable|null|array $condition you can use a callable function ($row,$id):bool {}<br/>
+                                       or a comparison array ['id'=>'eq;2|lt;3'] "|" adds more comparisons<br>
+                                       or a comparison array [['id=>['eq',2]],['id'=>['lt',3]]]<br>
+* **parameter** bool                $onlyFirst if true then it only returns the first value
+* **parameter** string              $mode      =['all','key','value'] // (default is all)<br>
+                                       <b>all</b> returns the key and the value obtained<br>
+                                       <b>key</b> only returns the key<br>
+                                       <b>value</b> only returns the value
+
+**Example:**  
+```php
+ArrayOne::set($array)->find(function($row, $id) {
+          return $row['id'] === 2;
+          })->getCurrent(); // [[0,"apple"],[3,"pear"]]
+```
+
+> It uses the same conditions as filter()
+
+### isIndexArray() isIndex()
+Returns true if the array is an indexed array. It does not scan the whole array, but instead it only returns
+true if the index 0 exists, and it is the first value.  
+**Example:**  
+```php
+ArrayOne::isIndexArray(['cocacola','fanta']); // true
+ArrayOne::isIndexArray(['prod1'=>'cocacola','prod2'=>'fanta']); // false (associative array)
+ArrayOne::isIndexArray('cocacola'); // false (not array)
+ArrayOne::set(['cocacola','fanta'])->isIndex(); // dynamic method (true)
+```
+
+## isIndexTableArray() isIndexTable()
+It returns true if the value is an indexed array with the first value an array (i.e. a table)
+**Example:**
+```php
+ArrayOne::isIndexTableArray([['cocacola','fanta']]); // true
+ArrayOne::isIndexTableArray(['cocacola','fanta']); // false
+ArrayOne::isIndexTableArray(['first'=>['hello'],'second'=>'world']) // false
+```
 
 
 ### first
@@ -557,9 +604,9 @@ ValidateOne
 | null                  | The value **MUST** be null. It is different to  **nullable** because **nullable** is a "**CAN**" | null               | "hello"       | null           |
 | empty                 | if the value is empty                                                                            | ""                 | "hello"       | empty          |
 | lt                    | if the value is less than                                                                        | 1                  | 10            | lt;5           |
-| lte                   | if the value is less or equals than                                                              | 1                  | 10            | lte;5          |
+| lte/le                | if the value is less or equals than                                                              | 1                  | 10            | lte;5          |
 | gt                    | if the value is great than                                                                       | 10                 | 1             | gt;5           |
-| gte                   | if the value is great or equals than                                                             | 10                 | 1             | gte;5          |
+| gte/ge                | if the value is great or equals than                                                             | 10                 | 1             | gte;5          |
 | between               | if the value is between                                                                          | 5                  | 0             | between;4,5    |
 | true                  | if the value is true or 1                                                                        | true               | false         | true           |
 | false                 | if the value is false, or 0                                                                      | false              | true          | false          |
@@ -629,6 +676,11 @@ $this->makeRequestArrayByExample(['a'=1,'b'=>2]); // ['a'='post','b'=>'post'];
 
 
 ## versions
+* 1.11 2024-03-01
+  * added method find()
+  * aedded method isIndexArray() and isIndexTableArray()
+  * now find() and filter() allows multiple conditions
+  * and find() and filter(), the condition ['field'='eq;2'] could be written as ['field','2']
 * 1.10 2024-02-24
   * Added more doc for validate()
   * Now validate also returns an array $this::$errorStack

@@ -1,6 +1,5 @@
 <?php /** @noinspection PhpLanguageLevelInspection */
 /** @noinspection GrazieInspection */
-
 /** @noinspection UnknownInspectionInspection */
 
 namespace eftec;
@@ -25,7 +24,7 @@ class ArrayOne implements ArrayAccess
     protected $currentArray;
     protected $curNav;
     public static $error = '';
-    public $errorStack=[];
+    public $errorStack = [];
 
     /**
      * Constructor<br/>
@@ -310,6 +309,7 @@ class ArrayOne implements ArrayAccess
         $this->setCurrentArray();
         return $this->array;
     }
+
     /**
      * Clone of a(). This method returns the whole array transformed and not only the current navigation.<br/>
      * **Example:**<br/>
@@ -317,7 +317,7 @@ class ArrayOne implements ArrayAccess
      * $this->set($array)->nav('field')->getAll();
      * ```
      */
-    public function getAll():?array
+    public function getAll(): ?array
     {
         return $this->all();
     }
@@ -406,24 +406,23 @@ class ArrayOne implements ArrayAccess
      * $this->rowToValue('a'); // [1,2]
      * $this->rowToValue('a',true); // [1,2,null]
      * ```
-     * @param mixed $colName The name of the column
+     * @param mixed $colName          The name of the column
      * @param bool  $nullWhenNotFound if true then it returns null when the column is not found in a row<br>
      *                                otherwise, it skips the column
      * @return ArrayOne
      */
-    public function rowToValue($colName,bool $nullWhenNotFound=false):ArrayOne
+    public function rowToValue($colName, bool $nullWhenNotFound = false): ArrayOne
     {
         if ($this->currentArray === null) {
             return $this;
         }
-        foreach($this->currentArray as $k=>$v) {
-            $tmp=$v[$colName]??null;
-            if($tmp===null && !$nullWhenNotFound) {
+        foreach ($this->currentArray as $k => $v) {
+            $tmp = $v[$colName] ?? null;
+            if ($tmp === null && !$nullWhenNotFound) {
                 unset($this->currentArray[$k]);
             } else {
                 $this->currentArray[$k] = $tmp;
             }
-
         }
         return $this;
     }
@@ -492,13 +491,15 @@ class ArrayOne implements ArrayAccess
      * // using a function a returning a flat result:
      * $r = ArrayOne::set($array)->filter(function($row, $id) {return $row['id'] === 2;}, false)->result();
      * // using an associative array:
-     * $r = ArrayOne::set($array)->filter(['id'=>'eq;2'], false)->result();
+     * $r = ArrayOne::set($array)->filter(['id'=>'eq;2'], false)->result(); // 'eq;2' or simply '2'
      * // using an associative array that contains an array:
-     * $r = ArrayOne::set($array)->filter(['id'=>['eq,2], false)->result();
+     * $r = ArrayOne::set($array)->filter(['id'=>['eq,2]], false)->result();
+     * // multiples conditions: id=2 and col=10
+     * $r = ArrayOne::set($array)->filter([['id'=>'eq;2'],['col','eq;10]], false)->result();
      * ```
-     * @param callable|null|array $condition you can use a callable function ($row,$id)<br/>
+     * @param callable|null|array $condition you can use a callable function ($row,$id):true {}<br/>
      *                                       or a comparison array ['id'=>'eq;2|lt;3'] "|" adds more comparisons<br>
-     *                                       or a comparison array ['id'=>[['eq',2],['lt',3]]<br>
+     *                                       or a comparison array [['id=>['eq',2]],['id'=>['lt',3]]]<br>
      * @param bool                $flat
      * @return $this
      * @see ArrayOne::validate to see the definition of comparison array
@@ -513,12 +514,149 @@ class ArrayOne implements ArrayAccess
         } else {
             $this->currentArray = array_filter($this->currentArray,
                 function($row, $index) use ($condition) {
+                    if (self::isIndexTableArray($condition)) { // multiples conditions.
+                        foreach ($condition as $subcondition) {
+                            if (!$this->filterCondition($row, $index, $subcondition)) {
+                                return false;
+                            }
+                        }
+                        return true;
+                    }
                     return $this->filterCondition($row, $index, $condition);
                 },
                 ARRAY_FILTER_USE_BOTH);
         }
         if ($flat && count($this->currentArray) === 1) {
             $this->currentArray = reset($this->currentArray);
+        }
+        return $this;
+    }
+
+    /**
+     * Returns true if the array is an indexed array. It does not scan the whole array but instead it only returns
+     * true if the index 0 exists and it is the first value.<br>
+     * **Example:**<br/>
+     * ```php
+     * ArrayOne::isIndexArray(['cocacola','fanta']); // true
+     * ArrayOne::isIndexArray(['prod1'=>'cocacola','prod2'=>'fanta']); // false (associative array)
+     * ArrayOne::isIndexArray('cocacola'); // false (not array)
+     * ```
+     *
+     * @param mixed $value the value to analize.
+     * @return bool true if the value is an indexed array, otherwise false.<br>
+     *                     null or non array returns false<br>
+     *                     Empty array returns faLse
+     */
+    public static function isIndexArray($value = null): bool
+    {
+        if (!is_array($value)) {
+            return false;
+        }
+        return (array_key_exists(0, $value) && array_key_first($value) === 0);
+    }
+
+    /**
+     * It returns true if the value is an indexed array with the first value an array (i.e. a table)
+     * **Example:**
+     * ```php
+     * ArrayOne::isIndexTableArray([['cocacola','fanta']]); // true
+     * ArrayOne::isIndexTableArray(['cocacola','fanta']); // false
+     * ArrayOne::isIndexTableArray(['first'=>['hello'],'second'=>'world']) // false
+     * ```
+     * @param mixed $value
+     * @return bool
+     */
+    public static function isIndexTableArray($value = null): bool
+    {
+        return self::isIndexArray($value) && is_array($value[0]);
+    }
+
+    /**
+     * It is the dynamic version of the method isIndexArray.<br>
+     * @return bool true if the value is an indexed array, otherwise false (null returns false)
+     * @see ArrayOne::isIndexArray
+     */
+    public function isIndex(): bool
+    {
+        return self::isIndexArray($this->currentArray);
+    }
+
+    /**
+     * The dynamic version of the method isIndexTableArray()
+     * @return bool
+     * @see ArrayOne::isIndexTableArray
+     */
+    public function isIndexTable(): bool
+    {
+        return self::isIndexTableArray($this->currentArray);
+    }
+
+    /**
+     * It returns an array with the key and values of the elements that matches the condition.<br>
+     *  **Example:**<br/>
+     * ```php
+     * ArrayOne::set($array)->find(function($row, $id) {
+     *          return $row['id'] === 2;
+     *          })->getCurrent(); // [[0,"apple"],[3,"pear"]]
+     * ```
+     * @param callable|null|array $condition you can use a callable function ($row,$id):bool {}<br/>
+     *                                       or a comparison array ['id'=>'eq;2|lt;3'] "|" adds more comparisons<br>
+     *                                       or a comparison array [['id=>['eq',2]],['id'=>['lt',3]]]<br>
+     * @param bool                $onlyFirst if true then it only returns the first value
+     * @param string              $mode      =['all','key','value'] // (default is all)<br>
+     *                                       <b>all</b> returns the key and the value obtained<br>
+     *                                       <b>key</b> only returns the key<br>
+     *                                       <b>value</b> only returns the value
+     * @return $this
+     * @noinspection NestedTernaryOperatorInspection
+     * @noinspection DuplicatedCode
+     */
+    public function find($condition, bool $onlyFirst = true, string $mode = "all"): ArrayOne
+    {
+        if ($this->currentArray === null) {
+            return $this;
+        }
+        $final = [];
+        $found = false;
+        foreach ($this->currentArray as $k => $v) {
+            if ($condition instanceof Closure) {
+                if ($condition($v, $k)) {
+                    $found = true;
+                    if ($onlyFirst) {
+                        $final = ($mode === 'all' ? [$k, $v] : ($mode === 'key' ? $k : $v));
+                        break;
+                    }
+                    $final[] = ($mode === 'all' ? [$k, $v] : ($mode === 'key' ? $k : $v));
+                }
+            } else if (self::isIndexTableArray($condition)) { // multiples conditions.
+                $subfound = true;
+                foreach ($condition as $subcondition) {
+                    if (!$this->filterCondition($v, $k, $subcondition)) {
+                        $subfound = false;
+                        break;
+                    }
+                }
+                if ($subfound) {
+                    $found = true;
+                    if ($onlyFirst) {
+                        $final = ($mode === 'all' ? [$k, $v] : ($mode === 'key' ? $k : $v));
+                        break;
+                    }
+                    $final[] = ($mode === 'all' ? [$k, $v] : ($mode === 'key' ? $k : $v));
+                }
+            } else if ($this->filterCondition($v, $k, $condition)) {
+                $found = true;
+                if ($onlyFirst) {
+                    $final = ($mode === 'all' ? [$k, $v] : ($mode === 'key' ? $k : $v));
+                    break;
+                }
+                $final[] = ($mode === 'all' ? [$k, $v] : ($mode === 'key' ? $k : $v));
+            }
+        }
+        if ($found) {
+            $this->currentArray = $final;
+        } else {
+            $this->currentArray = null;
         }
         return $this;
     }
@@ -558,9 +696,14 @@ class ArrayOne implements ArrayAccess
                 } else {
                     $vparts = explode('|', $condition[$k]);
                     foreach ($vparts as $vpart) {
-                        $fragment = explode(';', $vpart, 3);
-                        $type = $fragment[0];
-                        $compValue = $fragment[1] ?? null;
+                        $fragment = explode(';', $vpart, 2);
+                        if(count($fragment)===1) {
+                            $compValue=$vpart;
+                            $type='eq';
+                        } else {
+                            $type = $fragment[0];
+                            $compValue = $fragment[1] ?? null;
+                        }
                         if ($compValue !== null && strpos($compValue, ',') !== false) {
                             $compValue = explode(',', $compValue);
                         }
@@ -784,6 +927,7 @@ class ArrayOne implements ArrayAccess
                         '%field is great or equal than %comp';
                 }
                 break;
+            case 'le':
             case 'lte':
                 if (($r > $compareValue) !== $negation) {
                     $fail = true;
@@ -800,6 +944,7 @@ class ArrayOne implements ArrayAccess
                         '%field is less or equal than %comp';
                 }
                 break;
+            case 'ge':
             case 'gte':
                 if (($r < $compareValue) !== $negation) {
                     $fail = true;
@@ -1142,7 +1287,7 @@ class ArrayOne implements ArrayAccess
                 [$colName, $colOld, $fun] = $pf;
                 if (is_callable($fun) && !is_string($fun)) {
                     $initial[$colName] = $fun($initial[$colName] ?? null, $row);
-                } else if(is_array($fun)) {
+                } else if (is_array($fun)) {
                     $initial[$colName] = $fun[0]($initial[$colName] ?? null, $row);
                 } else {
                     switch ($fun) {
@@ -1184,8 +1329,8 @@ class ArrayOne implements ArrayAccess
             foreach ($preFunction as $pf) {
                 /** @noinspection PhpUnusedLocalVariableInspection */
                 [$colName, $colOld, $fun] = $pf;
-                if(is_array($fun)) {
-                    $groups[$k][$colName]= $fun[1]($groups[$k][$colName], $groups[$k]['__count']);
+                if (is_array($fun)) {
+                    $groups[$k][$colName] = $fun[1]($groups[$k][$colName], $groups[$k]['__count']);
                 } else {
                     switch ($fun) {
                         case 'avg':
@@ -1525,9 +1670,9 @@ class ArrayOne implements ArrayAccess
      *                               <b>null</b> :if the value is null<br/>
      *                               <b>empty</b> :if the value is empty<br/>
      *                               <b>lt</b> :if the value is less than<br/>
-     *                               <b>lte</b> :if the value is less or equals than<br/>
+     *                               <b>lte/le</b> :if the value is less or equals than<br/>
      *                               <b>gt</b> :if the value is great than<br/>
-     *                               <b>gte</b> :if the value is great or equals than<br/>
+     *                               <b>gte/ge</b> :if the value is great or equals than<br/>
      *                               <b>between</b> :if the value is between<br/>
      *                               <b>true</b> :if the value is true<br/>
      *                               <b>false</b> :if the value is false<br/>
@@ -1619,10 +1764,10 @@ class ArrayOne implements ArrayAccess
                             $msg = null;
                         }
                         if (isset($final[$field])) {
-                            $this->errorStack[$field].= '|' . $msg;
+                            $this->errorStack[$field] .= '|' . $msg;
                             $final[$field] .= '|' . $msg;
                         } else {
-                            if($msg!==null) {
+                            if ($msg !== null) {
                                 $this->errorStack[$field] = $msg;
                             }
                             $final[$field] = $msg;
@@ -1640,8 +1785,10 @@ class ArrayOne implements ArrayAccess
         }
         return $final;
     }
-    public function isValid():bool {
-        return count($this->errorStack)===0;
+
+    public function isValid(): bool
+    {
+        return count($this->errorStack) === 0;
     }
 
     /**
@@ -1703,9 +1850,9 @@ class ArrayOne implements ArrayAccess
         }
     }
 
-
     //region interface ArrayAccess
-    public function offsetSet($offset, $value): void {
+    public function offsetSet($offset, $value): void
+    {
         if (is_null($offset)) {
             $this->array[] = $value;
         } else {
@@ -1713,11 +1860,13 @@ class ArrayOne implements ArrayAccess
         }
     }
 
-    public function offsetExists($offset): bool {
+    public function offsetExists($offset): bool
+    {
         return isset($this->array[$offset]);
     }
 
-    public function offsetUnset($offset): void {
+    public function offsetUnset($offset): void
+    {
         unset($this->array[$offset]);
     }
 
@@ -1732,8 +1881,21 @@ class ArrayOne implements ArrayAccess
      * @noinspection PhpFullyQualifiedNameUsageInspection
      */
     #[\ReturnTypeWillChange]
-    public function offsetGet($offset) {
+    public function offsetGet($offset)
+    {
         return $this->array[$offset] ?? null;
     }
     //endregion
+}
+
+// polyfills
+if (!function_exists('array_key_first')) {
+    function array_key_first(array $arr)
+    {
+        /** @noinspection LoopWhichDoesNotLoopInspection */
+        foreach ($arr as $key => $unused) {
+            return $key;
+        }
+        return null;
+    }
 }

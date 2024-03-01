@@ -939,12 +939,39 @@ class ArrayOneTest extends TestCase
             return $row['id'] === 2;
         }, false)->getCurrent();
         $this->assertEquals([1 => ['id' => 2, 'name' => 'argentina']], $r);
+
+    }
+    public function testFind(): void
+    {
+        $array = [['id' => 1, 'name' => 'chile'], ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']];
+        $r = ArrayOne::set($array)->find(function($row, $id) {
+            return $row['id'] === 2;
+        }, true)->getCurrent();
+        $this->assertEquals([1,['id' => 2, 'name' => 'argentina']], $r);
+        $r = ArrayOne::set($array)->find(function($row, $id) {
+            return $row['id'] === 2;
+        }, false)->getCurrent();
+        $this->assertEquals([1 => ['id' => 2, 'name' => 'argentina']], $r);
+    }
+    public function testIsIndexArray():void {
+        $this->assertTrue(ArrayOne::set(['cocacola','fanta'])->isIndex());
+        $this->assertFalse(ArrayOne::set(['cocacola','fanta'])->isIndexTable());
+        $this->assertTrue(ArrayOne::set([['cocacola','fanta']])->isIndexTable());
+        $this->assertTrue(ArrayOne::isIndexArray(['cocacola','fanta']));
+        $this->assertTrue(ArrayOne::isIndexTableArray([['cocacola','fanta']]));
+        $this->assertNotTrue(ArrayOne::isIndexTableArray(['cocacola','fanta']));
+        $this->assertNotTrue(ArrayOne::isIndexTableArray(['first'=>['hello'],'second'=>'world']));
+        $this->assertNotTrue(ArrayOne::isIndexArray(['prod1'=>'cocacola','prod2'=>'fanta']));
+        $this->assertNotTrue(ArrayOne::isIndexArray('cocacola'));
+
     }
 
     public function testfilter2(): void
     {
         $array = [['id' => 1, 'name' => 'chile'], ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']];
         $r = ArrayOne::set($array)->filter(['id' => 'eq;2'], true)->getCurrent();
+        $this->assertEquals(['id' => 2, 'name' => 'argentina'], $r);
+        $r = ArrayOne::set($array)->filter(['id' => '2'], true)->getCurrent();
         $this->assertEquals(['id' => 2, 'name' => 'argentina'], $r);
         $r = ArrayOne::set($array)->filter(['id' => 'gte;2'])->getCurrent();
         $this->assertEquals([1 => ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']], $r);
