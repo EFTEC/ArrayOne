@@ -59,8 +59,16 @@ $top = [
 
 use eftec\ArrayOne;
 
+
 include __DIR__.'/../vendor/autoload.php';
+include __DIR__.'/libexample.php';
+
+echo "<h1>Test2 array</h1>";
+var_dump2($top);
+echo "<h1>navigation to topping</h1>";
+$result= ArrayOne::set($top)->nav('topping')->getCurrent();
+var_dump2($result);
+echo "<h1>And reducing the values (counting)</h1>";
 $result= (new ArrayOne($top))->nav('topping')->reduce(['id'=>'count'])->getCurrent();
-var_dump($result);
-$result= ArrayOne::set($top)->nav('topping')->reduce(['id'=>'count'])->getCurrent();
-var_dump($result);
+var_dump2($result);
+

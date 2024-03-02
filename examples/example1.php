@@ -3,6 +3,7 @@
 use eftec\ArrayOne;
 
 include __DIR__.'/../vendor/autoload.php';
+include __DIR__.'/libexample.php';
 
 $array=[1,2,3
     ,'products'=>[
@@ -19,11 +20,14 @@ $r=ArrayOne::set($array)
     ->removeCol(['price'])
     ->col('name')
     ->last()
-    ->current();
-
+    ->getCurrent();
+echo "<h1>Example1 array:</h1>";
+var_dump2($array);
+echo "<h1>nav to product, creating a new column, filtering, removing column price, returning a column and getting the last value</h1>";
 var_dump($r);
-var_dump(ArrayOne::$error);
-
+echo "<h1>Showing errors</h1>";
+var_dump2(ArrayOne::$error);
+echo "<h1>reducing products</h1>";
 $r=ArrayOne::set($array)
     ->nav('products')
     ->reduce(function($row,$index,$previous) {
@@ -31,13 +35,13 @@ $r=ArrayOne::set($array)
             'quantity'=>$previous['quantity']+$row['quantity'],'counter'=>@$previous['counter']+1];
     })
     ->all();
-var_dump('--------');
-var_dump($r);
 
+var_dump2($r);
+echo "<h1>reducing products</h1>";
 $r=ArrayOne::set($array)
     ->nav('products')
     ->reduce(['price'=>'sum','quantity'=>'sum'])
     ->all();
-var_dump('--------');
-var_dump($r);
+
+var_dump2($r);
 

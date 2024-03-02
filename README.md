@@ -676,6 +676,8 @@ $this->makeRequestArrayByExample(['a'=1,'b'=>2]); // ['a'='post','b'=>'post'];
 
 
 ## versions
+* 1.12 2024-03-01
+  * Updating dependency to PHP 7.4. The extended support of PHP 7.2 ended 3 years ago.
 * 1.11 2024-03-01
   * added method find()
   * aedded method isIndexArray() and isIndexTableArray()
@@ -733,3 +735,4 @@ Licensed under dual license: LGPL-3.0 and commercial license.
 In short:
 - [x] Can I use in a close source application for free? Yes if you don't modify this library.
 - [x] If you modify it, then you must share the source code.
+- [x] If you want to modify privately, then you must buy a license.

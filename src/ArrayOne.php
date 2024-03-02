@@ -7,6 +7,7 @@ namespace eftec;
 use ArrayAccess;
 use Closure;
 use Exception;
+use JsonException;
 use RuntimeException;
 
 /**
@@ -16,15 +17,16 @@ use RuntimeException;
  */
 class ArrayOne implements ArrayAccess
 {
-    public const VERSION = "1.11";
+    public const VERSION = "1.12";
     /** @var array|null */
-    protected $array;
-    protected $serviceObject;
+    protected ?array $array;
+    protected ?object $serviceObject;
     /** @var mixed */
     protected $currentArray;
+    /** @var mixed */
     protected $curNav;
-    public static $error = '';
-    public $errorStack = [];
+    public static string $error = '';
+    public array $errorStack = [];
 
     /**
      * Constructor<br/>
@@ -167,10 +169,11 @@ class ArrayOne implements ArrayAccess
      * ```
      * @param string $json
      * @return ArrayOne
+     * @throws JsonException
      */
     public static function setJson(string $json): ArrayOne
     {
-        $json = json_decode($json, true);
+        $json = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
         return self::set($json);
     }
 
@@ -488,6 +491,7 @@ class ArrayOne implements ArrayAccess
      * // get the row #2 "argentina":
      * // using a function:
      * $r = ArrayOne::set($array)->filter(function($row, $id) {return $row['id'] === 2;}, true)->result();
+     * $r = ArrayOne::set($array)->filter(fn($row, $id) => $row['id'] === 2, true)->result();
      * // using a function a returning a flat result:
      * $r = ArrayOne::set($array)->filter(function($row, $id) {return $row['id'] === 2;}, false)->result();
      * // using an associative array:
