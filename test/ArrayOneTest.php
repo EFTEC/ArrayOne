@@ -3,7 +3,6 @@
 namespace eftec\test;
 
 use eftec\ArrayOne;
-use Exception;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
@@ -55,11 +54,10 @@ class ArrayOneTest extends TestCase
                 5,
             ]
         ];
-        $arr = ArrayOne::set($invoice)
-            ->nav('detail')
+        $arr = ArrayOne::set($invoice['detail'])
             ->reduce(['unitPrice' => 'sum', 'quantity' => 'sum'])
             ->all();
-        $this->assertEquals(['id' => 1, 'customer' => 10, 'detail' => ['unitPrice' => 800, 'quantity' => 12]], $arr);
+        $this->assertEquals(['unitPrice' => 800, 'quantity' => 12], $arr);
     }
 
     public function testRowToValue(): void
@@ -174,6 +172,11 @@ class ArrayOneTest extends TestCase
         $this->assertEquals(['t' => 'c', 'd' => ['d1', 'd2'], 0 => 'e'], ArrayOne::set($array)->removeFirstRow(2)->all());
         $this->assertEquals(['a', 'b', 't' => 'c'], ArrayOne::set($array)->removeLastRow(2)->all());
     }
+    public function testMap():void
+    {
+        $array=[1,2,3,4];
+        $this->assertEquals([10,20,30,40], ArrayOne::set($array)->map(function($row) { return $row*10;})->all());
+    }
 
     public function testRequest(): void
     {
@@ -255,33 +258,7 @@ class ArrayOneTest extends TestCase
         $this->assertEquals($expected, $r);
     }
 
-    public function testLevel(): void
-    {
-        $array = ['one' => ['two' => ['three' => ['four' => ['five' => [1, 2, 3]]]]]];
-        $this->assertEquals([1, 2, 3], ArrayOne::set($array)->nav('one.two.three.four.five')->getCurrent());
-        try {
-            ArrayOne::set($array)->nav('one.two.three.fourx.five')->getCurrent(); // this must throw an exception.
-            $this->assertEquals(false, true);
-        } catch (Exception $ex) {
-            $this->assertEquals(true, true);
-        }
-    }
 
-    public function testLevel2(): void
-    {
-        $array = ['one' => ['two' => ['three' => ['four' => ['five' => [1, 2, 3]]]]]];
-        $this->assertEquals([10, 20, 30], ArrayOne::set($array)->nav('one.two.three.four.five')
-            ->map(function($row) {
-                return $row * 10;
-            })
-            ->getCurrent());
-        try {
-            ArrayOne::set($array)->nav('one.two.three.fourx.five')->getCurrent(); // this must throw an exception.
-            $this->assertEquals(false, true);
-        } catch (Exception $ex) {
-            $this->assertEquals(true, true);
-        }
-    }
 
     public function testMask(): void
     {
@@ -451,8 +428,7 @@ class ArrayOneTest extends TestCase
                 ['name' => 'cocacola3', 'price' => 700, 'quantity' => 400],
             ]
         ];
-        $r = ArrayOne::set($array)
-            ->nav('products')
+        $array['products'] = ArrayOne::set($array['products'])
             ->modCol('name', function($col, $index) {
                 return strtoupper($col['name']);
             })
@@ -463,7 +439,7 @@ class ArrayOneTest extends TestCase
                 ['name' => 'COCACOLA2', 'price' => 600, 'quantity' => 300],
                 ['name' => 'COCACOLA3', 'price' => 700, 'quantity' => 400],
             ]
-        ], $r);
+        ], $array);
     }
 
     public function testSort(): void
@@ -475,16 +451,18 @@ class ArrayOneTest extends TestCase
                 ['name' => 'cocacola3', 'price' => 700, 'quantity' => 400, 'type' => 'type1'],
             ]
         ];
-        $r = ArrayOne::set($array)->nav('products')->sort('name')->all();
+        $r=$array;
+        $r['products'] = ArrayOne::set($array['products'])->sort('name')->all();
         $this->assertEquals([1, 2, 3, 'products' => [['name' => 'cocacola1', 'price' => 500, 'quantity' => 200, 'type' => 'type1'],
             ['name' => 'cocacola2', 'price' => 600, 'quantity' => 300, 'type' => 'type2'],
             ['name' => 'cocacola3', 'price' => 700, 'quantity' => 400, 'type' => 'type1']]], $r);
-        $r = ArrayOne::set($array)->nav('products')->sort('name', 'desc')->all();
+        $r2=$array;
+        $r2['products'] = ArrayOne::set($array['products'])->sort('name', 'desc')->all();
         $this->assertEquals([1, 2, 3, 'products' => [
             ['name' => 'cocacola3', 'price' => 700, 'quantity' => 400, 'type' => 'type1'],
             ['name' => 'cocacola2', 'price' => 600, 'quantity' => 300, 'type' => 'type2'],
             ['name' => 'cocacola1', 'price' => 500, 'quantity' => 200, 'type' => 'type1']
-        ]], $r);
+        ]], $r2);
         $array = ['chile', 'argentina', 'peru'];
         $r = ArrayOne::set($array)->sort(null)->all();
         $this->assertEquals(['argentina', 'chile', 'peru'], $r);
@@ -575,27 +553,27 @@ class ArrayOneTest extends TestCase
                 ['name' => 'cocacola3', 'price' => 700, 'quantity' => 400, 'type' => 'type1'],
             ]
         ];
-        $r = ArrayOne::set($array)
-            ->nav('products')
+        $r=$array;
+        $r['products'] = ArrayOne::set($array['products'])
             ->group('type', ['price' => 'sum', 'quantity' => 'sum'])->all();
         $this->assertEquals([1, 2, 3,
             'products' => [
                 'type1' => ['price' => 1200, 'quantity' => 600]
                 , 'type2' => ['price' => 600, 'quantity' => 300]
             ]], $r);
-        $r = ArrayOne::set($array)
-            ->nav('products')
+        $r=$array;
+        $r['products'] = ArrayOne::set($array['products'])
             ->group('type', ['price' => 'sum', 'quantity' => 'sum'])->indexToCol('type')->all();
         $this->assertEquals([1, 2, 3,
             'products' => [
                 ['type' => 'type1', 'price' => 1200, 'quantity' => 600]
                 , ['type' => 'type2', 'price' => 600, 'quantity' => 300]
             ]], $r);
-        $this->assertEquals([1, 2, 3,
-            'products' => [
+        $this->assertEquals([
+
                 'type1' => ['price' => 1200, 'quantity' => 600]
                 , 'type2' => ['price' => 600, 'quantity' => 300]
-            ]], ArrayOne::set($r)->nav('products')->columnToIndex('type')->all());
+            ], ArrayOne::set($r['products'])->columnToIndex('type')->all());
     }
 
     public function testFlat(): void
@@ -605,10 +583,8 @@ class ArrayOneTest extends TestCase
                 ['name' => 'cocacola1', 'price' => 500, 'quantity' => 200]
             ]
         ];
-        $arrayFlat = [1, 2, 3
-            , 'products' => ['name' => 'cocacola1', 'price' => 500, 'quantity' => 200]
-        ];
-        $this->assertEquals($arrayFlat, ArrayOne::set($array)->nav('products')->flat()->all());
+        $arrayFlat =  ['name' => 'cocacola1', 'price' => 500, 'quantity' => 200];
+        $this->assertEquals($arrayFlat, ArrayOne::set($array['products'])->flat()->all());
     }
 
     public function testMerger(): void
@@ -620,29 +596,26 @@ class ArrayOneTest extends TestCase
                 ['name' => 'cocacola3', 'price' => 700, 'quantity' => 400, 'type' => 'type1'],
             ]
         ];
-        $arrayExpected = [1, 2, 3
-            , 'products' => [
+        $arrayExpected = [
                 ['name' => 'cocacola1', 'price' => 500, 'quantity' => 200, 'type' => 'type1', 'desc' => 'it is the type #1'],
                 ['name' => 'cocacola2', 'price' => 600, 'quantity' => 300, 'type' => 'type2', 'desc' => 'it is the type #2'],
                 ['name' => 'cocacola3', 'price' => 700, 'quantity' => 400, 'type' => 'type1', 'desc' => 'it is the type #1'],
-            ]
-        ];
+            ];
         $types = [['name' => 'type1', 'desc' => 'it is the type #1'], ['name' => 'type2', 'desc' => 'it is the type #2']];
-        $this->assertEquals($arrayExpected, ArrayOne::set($array)->nav('products')->join($types, 'type', 'name')->all());
+        $this->assertEquals($arrayExpected, ArrayOne::set($array['products'])->join($types, 'type', 'name')->all());
     }
 
     public function testIndexToCol(): void
     {
         $array = [1, 2, 3, 'nav' => ['c' => [1, 2, 3], 'd' => [1, 2, 3]]];
-        $r = ArrayOne::set($array)->nav('nav')->indexToCol('col1')->all();
+        $r = ArrayOne::set($array['nav'])->indexToCol('col1')->all();
         //var_export($r);
-        $this->assertEquals([0 => 1, 1 => 2, 2 => 3, 'nav' =>
-            [
+        $this->assertEquals([
                 0 =>
                     [0 => 1, 1 => 2, 2 => 3, 'col1' => 'c',],
                 1 =>
                     [0 => 1, 1 => 2, 2 => 3, 'col1' => 'd',],
-            ],], $r);
+            ], $r);
     }
 
     public function test2(): void
@@ -654,8 +627,8 @@ class ArrayOneTest extends TestCase
                 ['name' => 'cocacola3', 'price' => 700, 'quantity' => 400],
             ]
         ];
-        $r = ArrayOne::set($array)
-            ->nav('products')
+        //todo: revisar este
+        $r = ArrayOne::set($array['products'])
             ->modCol('subtotal', function($col, $index) {
                 return $col['price'] * $col['quantity'];
             })
@@ -666,15 +639,12 @@ class ArrayOneTest extends TestCase
             ->col('name')
             ->last()
             ->all();
-        $this->assertEquals([1, 2, 3
-            , 'products' => 'cocacola3'
-        ], $r);
-        $r = ArrayOne::set($array)->nav('products')->nPos(1)->getCurrent();
+        $this->assertEquals('cocacola3', $r);
+        $r = ArrayOne::set($array['products'])->nPos(1)->all();
         $this->assertEquals(['name' => 'cocacola2', 'price' => 600, 'quantity' => 300], $r);
-        $r = ArrayOne::set($array)
-            ->nav('products')
+        $r = ArrayOne::set($array['products'])
             ->nPos(1)
-            ->getCurrent();
+            ->all();
         $this->assertEquals(['name' => 'cocacola2',
             'price' => 600,
             'quantity' => 300], $r);
@@ -931,11 +901,11 @@ class ArrayOneTest extends TestCase
         $array = [['id' => 1, 'name' => 'chile'], ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']];
         $r = ArrayOne::set($array)->filter(function($row, $id) {
             return $row['id'] === 2;
-        }, true)->getCurrent();
+        }, true)->all();
         $this->assertEquals(['id' => 2, 'name' => 'argentina'], $r);
         $r = ArrayOne::set($array)->filter(function($row, $id) {
             return $row['id'] === 2;
-        }, false)->getCurrent();
+        }, false)->all();
         $this->assertEquals([1 => ['id' => 2, 'name' => 'argentina']], $r);
     }
 
@@ -944,11 +914,11 @@ class ArrayOneTest extends TestCase
         $array = [['id' => 1, 'name' => 'chile'], ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']];
         $r = ArrayOne::set($array)->find(function($row, $id) {
             return $row['id'] === 2;
-        }, true)->getCurrent();
+        }, true)->all();
         $this->assertEquals([1, ['id' => 2, 'name' => 'argentina']], $r);
         $r = ArrayOne::set($array)->find(function($row, $id) {
             return $row['id'] === 2;
-        }, false)->getCurrent();
+        }, false)->all();
         $this->assertEquals([[1, ['id' => 2, 'name' => 'argentina']]], $r);
     }
 
@@ -968,11 +938,11 @@ class ArrayOneTest extends TestCase
     public function testfilter2(): void
     {
         $array = [['id' => 1, 'name' => 'chile'], ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']];
-        $r = ArrayOne::set($array)->filter(['id' => 'eq;2'], true)->getCurrent();
+        $r = ArrayOne::set($array)->filter(['id' => 'eq;2'], true)->all();
         $this->assertEquals(['id' => 2, 'name' => 'argentina'], $r);
-        $r = ArrayOne::set($array)->filter(['id' => '2'], true)->getCurrent();
+        $r = ArrayOne::set($array)->filter(['id' => '2'], true)->all();
         $this->assertEquals(['id' => 2, 'name' => 'argentina'], $r);
-        $r = ArrayOne::set($array)->filter(['id' => 'gte;2'])->getCurrent();
+        $r = ArrayOne::set($array)->filter(['id' => 'gte;2'])->all();
         $this->assertEquals([1 => ['id' => 2, 'name' => 'argentina'], ['id' => 3, 'name' => 'peru']], $r);
     }
 
@@ -985,16 +955,16 @@ class ArrayOneTest extends TestCase
                 ['name' => 'cocacola3', 'price' => 700, 'quantity' => 400],
             ]
         ];
-        $this->assertEquals([1, 2, 3, 'products' => [
+        $this->assertEquals([
             'name' => 'cocacola1',
             'price' => 500,
-            'quantity' => 200]],
-            ArrayOne::set($array)->nav('products')->first()->all());
-        $this->assertEquals([1, 2, 3, 'products' => [
+            'quantity' => 200],
+            ArrayOne::set($array['products'])->first()->all());
+        $this->assertEquals( [
             'name' => 'cocacola3',
             'price' => 700,
-            'quantity' => 400]],
-            ArrayOne::set($array)->nav('products')->last()->all());
+            'quantity' => 400],
+            ArrayOne::set($array['products'])->last()->all());
     }
 
     public function testReduce(): void
@@ -1006,37 +976,25 @@ class ArrayOneTest extends TestCase
                 ['name' => 'cocacola3', 'price' => 700, 'quantity' => 400],
             ]
         ];
-        $r = ArrayOne::set($array)
-            ->nav('products')
+        $r = ArrayOne::set($array['products'])
             ->reduce(function($row, $index, $previous) {
                 return ['price' => $previous['price'] + $row['price'],
                     'quantity' => $previous['quantity'] + $row['quantity'], 'counter' => @$previous['counter'] + 1];
             })
             ->all();
-        $this->assertEquals([
-            0 => 1,
-            1 => 2,
-            2 => 3,
-            'products' =>
+        $this->assertEquals(
                 [
                     'price' => 1800,
                     'quantity' => 900,
                     'counter' => 2,
-                ],
-        ], $r);
-        $r = ArrayOne::set($array)
-            ->nav('products')
+                ], $r);
+        $r = ArrayOne::set($array['products'])
             ->reduce(['price' => 'sum', 'quantity' => 'sum'])
             ->all();
-        $this->assertEquals([
-            0 => 1,
-            1 => 2,
-            2 => 3,
-            'products' =>
+        $this->assertEquals(
                 [
                     'price' => 1800,
                     'quantity' => 900,
-                ],
-        ], $r);
+                ], $r);
     }
 }

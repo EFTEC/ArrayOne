@@ -17,14 +17,11 @@ use RuntimeException;
  */
 class ArrayOne implements ArrayAccess
 {
-    public const VERSION = "1.12";
-    /** @var array|null */
-    protected ?array $array;
+    public const VERSION = "2.0";
+    /** @var mixed */
+    protected $array;
     protected ?object $serviceObject;
-    /** @var mixed */
-    protected $currentArray;
-    /** @var mixed */
-    protected $curNav;
+
     public static string $error = '';
     public array $errorStack = [];
 
@@ -36,7 +33,6 @@ class ArrayOne implements ArrayAccess
     public function __construct(?array $array)
     {
         $this->array = $array;
-        $this->currentArray =& $array;
     }
 
     /**
@@ -230,75 +226,7 @@ class ArrayOne implements ArrayAccess
         return self::set($csv);
     }
 
-    /**
-     * Navigate inside the arrays.<br/>
-     * If you want to select a subcolumn, then you could indicate it separated by dot: column.subcolumn. You
-     * can separate up to 5 levels.
-     *
-     * **Example:**<br/>
-     * ```php
-     * $this->nav('col');
-     * $this->nav(); // return to root.
-     * $this->nav('col.subcol.subsubcol'); //  [col=>[subcol=>[subsubcol=>[1,2,3]]]] returns  [1,2,3]
-     * ```
-     * @param string|int|null $colName   the name of the field. If null then it returns to the root.<br/>
-     *                                   You can add more leves by separating by "."
-     * @return $this
-     */
-    public function nav($colName = null): ArrayOne
-    {
-        $this->setCurrentArray();
-        $this->curNav = $colName === null ?: explode('.', $colName);
-        $c = count($this->curNav);
-        $found = false;
-        if ($c > 5) {
-            throw new RuntimeException('nav: too many levels');
-        }
-        if ($c > 0) {
-            $found = array_key_exists($this->curNav[0], $this->array);
-        }
-        if ($c > 1 && $found) {
-            $found = array_key_exists($this->curNav[1], $this->array[$this->curNav[0]]);
-        }
-        if ($c > 2 && $found) {
-            $found = array_key_exists($this->curNav[2], $this->array[$this->curNav[0]][$this->curNav[1]]);
-        }
-        if ($c > 3 && $found) {
-            $found = array_key_exists($this->curNav[3], $this->array[$this->curNav[0]][$this->curNav[1]][$this->curNav[2]]);
-        }
-        if ($c > 4 && $found) {
-            $found = array_key_exists($this->curNav[4], $this->array[$this->curNav[0]][$this->curNav[1]][$this->curNav[2]][$this->curNav[3]]);
-        }
-        if ($found) {
-            switch ($c) {
-                case 1:
-                    $tmpArr = &$this->array[$this->curNav[0]];
-                    break;
-                case 2:
-                    $tmpArr = &$this->array[$this->curNav[0]][$this->curNav[1]];
-                    break;
-                case 3:
-                    $tmpArr = &$this->array[$this->curNav[0]][$this->curNav[1]][$this->curNav[2]];
-                    break;
-                case 4:
-                    $tmpArr = &$this->array[$this->curNav[0]][$this->curNav[1]][$this->curNav[2]][$this->curNav[3]];
-                    break;
-                case 5:
-                    $tmpArr = &$this->array[$this->curNav[0]][$this->curNav[1]][$this->curNav[2]][$this->curNav[3]][$this->curNav[4]];
-                    break;
-                default:
-                    $tmpArr = [];
-            }
-        }
-        if ($this->curNav === null) {
-            $this->currentArray = &$this->array;
-        } else if (!$found) {
-            throw new RuntimeException("nav: level [$colName] not found");
-        } else {
-            $this->currentArray = $tmpArr;
-        }
-        return $this;
-    }
+
 
     /**
      * Returns the whole array transformed and not only the current navigation.<br/>
@@ -307,9 +235,8 @@ class ArrayOne implements ArrayAccess
      * $this->set($array)->nav('field')->all();
      * ```
      */
-    public function all(): ?array
+    public function all()
     {
-        $this->setCurrentArray();
         return $this->array;
     }
 
@@ -325,28 +252,8 @@ class ArrayOne implements ArrayAccess
         return $this->all();
     }
 
-    /**
-     * @return array|mixed|null
-     * @deprecated This functionality will work 1.x but in 2.x will be discontinued. Use getCurrent()
-     */
-    public function current()
-    {
-        return $this->getCurrent();
-    }
 
-    /**
-     * Returns the result indicated by nav(). If you want to return the whole array, then use a()
-     * **Example:**<br/>
-     * ```php
-     * $this->set($array)->nav('field')->getCurrent();
-     * ```
-     * @return mixed
-     */
-    public function getCurrent()
-    {
-        $this->setCurrentArray();
-        return $this->curNav === null ? $this->array : $this->currentArray;
-    }
+
 
     /**
      * It adds or modify a column.
@@ -360,14 +267,14 @@ class ArrayOne implements ArrayAccess
      */
     public function modCol($colName = null, ?callable $operation = null): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
-        foreach ($this->currentArray as $index => $row) {
+        foreach ($this->array as $index => $row) {
             if ($colName === null) {
-                $this->currentArray[$index] = $operation($row, $index);
+                $this->array[$index] = $operation($row, $index);
             } else {
-                $this->currentArray[$index][$colName] = $operation($row, $index);
+                $this->array[$index][$colName] = $operation($row, $index);
             }
         }
         return $this;
@@ -385,16 +292,16 @@ class ArrayOne implements ArrayAccess
      */
     public function removeCol($colName): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
-        foreach ($this->currentArray as $index => $row) {
+        foreach ($this->array as $index => $row) {
             if (is_array($colName)) {
                 foreach ($colName as $c) {
-                    unset($this->currentArray[$index][$c]);
+                    unset($this->array[$index][$c]);
                 }
             } else {
-                unset($this->currentArray[$index][$colName]);
+                unset($this->array[$index][$colName]);
             }
         }
         return $this;
@@ -416,15 +323,15 @@ class ArrayOne implements ArrayAccess
      */
     public function rowToValue($colName, bool $nullWhenNotFound = false): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
-        foreach ($this->currentArray as $k => $v) {
+        foreach ($this->array as $k => $v) {
             $tmp = $v[$colName] ?? null;
             if ($tmp === null && !$nullWhenNotFound) {
-                unset($this->currentArray[$k]);
+                unset($this->array[$k]);
             } else {
-                $this->currentArray[$k] = $tmp;
+                $this->array[$k] = $tmp;
             }
         }
         return $this;
@@ -441,11 +348,11 @@ class ArrayOne implements ArrayAccess
      */
     public function col($colName): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
-        foreach ($this->currentArray as $index => $row) {
-            $this->currentArray[$index] = $this->currentArray[$index][$colName];
+        foreach ($this->array as $index => $row) {
+            $this->array[$index] = $this->array[$index][$colName];
         }
         return $this;
     }
@@ -467,14 +374,14 @@ class ArrayOne implements ArrayAccess
      */
     public function join(?array $arrayToJoin, $column1, $column2): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
-        foreach ($this->currentArray as $index => $row) {
+        foreach ($this->array as $index => $row) {
             foreach ($arrayToJoin as $row2) {
                 /** @noinspection TypeUnsafeComparisonInspection */
                 if ($row[$column1] == $row2[$column2]) {
-                    $this->currentArray[$index] = array_merge($row2, $this->currentArray[$index]);
+                    $this->array[$index] = array_merge($row2, $this->array[$index]);
                     break;
                 }
             }
@@ -510,13 +417,13 @@ class ArrayOne implements ArrayAccess
      */
     public function filter($condition, bool $flat = false): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
         if ($condition instanceof Closure) {
-            $this->currentArray = array_filter($this->currentArray, $condition, ARRAY_FILTER_USE_BOTH);
+            $this->array = array_filter($this->array, $condition, ARRAY_FILTER_USE_BOTH);
         } else {
-            $this->currentArray = array_filter($this->currentArray,
+            $this->array = array_filter($this->array,
                 function($row, $index) use ($condition) {
                     if (self::isIndexTableArray($condition)) { // multiples conditions.
                         foreach ($condition as $subcondition) {
@@ -530,8 +437,8 @@ class ArrayOne implements ArrayAccess
                 },
                 ARRAY_FILTER_USE_BOTH);
         }
-        if ($flat && count($this->currentArray) === 1) {
-            $this->currentArray = reset($this->currentArray);
+        if ($flat && count($this->array) === 1) {
+            $this->array = reset($this->array);
         }
         return $this;
     }
@@ -582,7 +489,7 @@ class ArrayOne implements ArrayAccess
      */
     public function isIndex(): bool
     {
-        return self::isIndexArray($this->currentArray);
+        return self::isIndexArray($this->array);
     }
 
     /**
@@ -592,7 +499,7 @@ class ArrayOne implements ArrayAccess
      */
     public function isIndexTable(): bool
     {
-        return self::isIndexTableArray($this->currentArray);
+        return self::isIndexTableArray($this->array);
     }
 
     /**
@@ -601,7 +508,7 @@ class ArrayOne implements ArrayAccess
      * ```php
      * ArrayOne::set($array)->find(function($row, $id) {
      *          return $row['id'] === 2;
-     *          })->getCurrent(); // [[0,"apple"],[3,"pear"]]
+     *          })->all(); // [[0,"apple"],[3,"pear"]]
      * ```
      * @param callable|null|array $condition you can use a callable function ($row,$id):bool {}<br/>
      *                                       or a comparison array ['id'=>'eq;2|lt;3'] "|" adds more comparisons<br>
@@ -617,12 +524,12 @@ class ArrayOne implements ArrayAccess
      */
     public function find($condition, bool $onlyFirst = true, string $mode = "all"): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
         $final = [];
         $found = false;
-        foreach ($this->currentArray as $k => $v) {
+        foreach ($this->array as $k => $v) {
             if ($condition instanceof Closure) {
                 if ($condition($v, $k)) {
                     $found = true;
@@ -658,9 +565,9 @@ class ArrayOne implements ArrayAccess
             }
         }
         if ($found) {
-            $this->currentArray = $final;
+            $this->array = $final;
         } else {
-            $this->currentArray = null;
+            $this->array = null;
         }
         return $this;
     }
@@ -726,15 +633,16 @@ class ArrayOne implements ArrayAccess
     /**
      * It calls a function for every element of an array<br>
      * **Example:**<br/>
-     * <i>$this->map(function($row) { return strtoupper($row); });</i><br>
-     *
+     * ```php
+     * $this->map(function($row) { return strtoupper($row); });
+     * ```
      * @param callable|null $condition The function to call.<br>
      *                                 It must has an argument (the current row) and it must returns a value
      * @return $this
      */
     public function map(?callable $condition): ArrayOne
     {
-        $this->currentArray = array_map($condition, $this->currentArray);
+        $this->array = array_map($condition, $this->array);
         return $this;
     }
 
@@ -748,13 +656,13 @@ class ArrayOne implements ArrayAccess
      */
     public function flat(): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
-        if (!is_array($this->currentArray) || count($this->currentArray) !== 1) {
+        if (!is_array($this->array) || count($this->array) !== 1) {
             return $this;
         }
-        $this->currentArray = reset($this->currentArray);
+        $this->array = reset($this->array);
         return $this;
     }
 
@@ -1032,10 +940,10 @@ class ArrayOne implements ArrayAccess
      */
     public function first(): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
-        $this->currentArray = reset($this->currentArray);
+        $this->array = reset($this->array);
         return $this;
     }
 
@@ -1045,10 +953,13 @@ class ArrayOne implements ArrayAccess
      */
     public function last(): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
-        $this->currentArray = end($this->currentArray);
+        if(!is_array($this->array)) {
+            return $this;
+        }
+        $this->array = end($this->array);
         return $this;
     }
 
@@ -1059,50 +970,17 @@ class ArrayOne implements ArrayAccess
      */
     public function nPos($index): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
-        if (!array_key_exists($index, $this->currentArray)) {
+        if (!array_key_exists($index, $this->array)) {
             throw new RuntimeException("nPos: index [$index] does not exist");
         }
-        $this->currentArray = $this->currentArray[$index];
+        $this->array = $this->array[$index];
         return $this;
     }
 
-    /**
-     * It is used internally to update the link between array and currentarray.<br>
-     * It should be called when:<br>
-     * a) the array is returned
-     * b) we change the navigation
-     * @return void
-     */
-    protected function setCurrentArray(): void
-    {
-        if ($this->curNav === null) {
-            $this->array = $this->currentArray;
-            return;
-        }
-        $c = count($this->curNav);
-        switch ($c) {
-            case 1:
-                $this->array[$this->curNav[0]] = $this->currentArray;
-                break;
-            case 2:
-                $this->array[$this->curNav[0]][$this->curNav[1]] =& $this->currentArray;
-                break;
-            case 3:
-                $this->array[$this->curNav[0]][$this->curNav[1]][$this->curNav[2]] =& $this->currentArray;
-                break;
-            case 4:
-                $this->array[$this->curNav[0]][$this->curNav[1]][$this->curNav[2]]
-                [$this->curNav[3]] =& $this->currentArray;
-                break;
-            case 5:
-                $this->array[$this->curNav[0]][$this->curNav[1]][$this->curNav[2]]
-                [$this->curNav[3]][$this->curNav[4]] =& $this->currentArray;
-                break;
-        }
-    }
+
 
     /**
      * You can reduce (flat) an array using aggregations or a custom function.
@@ -1119,10 +997,10 @@ class ArrayOne implements ArrayAccess
      */
     public function reduce($functionAggregation): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
-        $initial = reset($this->currentArray);
+        $initial = reset($this->array);
         // delete the columns that we won't use
         if (is_array($functionAggregation)) {
             foreach ($initial as $k => $v) {
@@ -1133,7 +1011,7 @@ class ArrayOne implements ArrayAccess
         }
         $skip = true;
         if ($functionAggregation instanceof Closure) {
-            foreach ($this->currentArray as $index => $row) {
+            foreach ($this->array as $index => $row) {
                 if ($skip) {
                     $skip = false;
                 } else {
@@ -1141,7 +1019,7 @@ class ArrayOne implements ArrayAccess
                 }
             }
         } else {
-            foreach ($this->currentArray as $row) {
+            foreach ($this->array as $row) {
                 if ($skip) {
                     $skip = false;
                 } else if (is_array($row)) {
@@ -1164,15 +1042,15 @@ class ArrayOne implements ArrayAccess
             foreach ($functionAggregation as $col => $fun) {
                 switch ($fun) {
                     case 'avg':
-                        $initial[$col] /= count($this->currentArray);
+                        $initial[$col] /= count($this->array);
                         break;
                     case 'count':
-                        $initial[$col] = count($this->currentArray);
+                        $initial[$col] = count($this->array);
                         break;
                 }
             }
         }
-        $this->currentArray = $initial;
+        $this->array = $initial;
         return $this;
     }
 
@@ -1187,14 +1065,14 @@ class ArrayOne implements ArrayAccess
      */
     public function indexToCol($newColumn): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
-        foreach ($this->currentArray as $index => &$row) {
+        foreach ($this->array as $index => &$row) {
             $row[$newColumn] = $index;
         }
         unset($row);
-        $this->currentArray = array_values($this->currentArray);
+        $this->array = array_values($this->array);
         return $this;
     }
 
@@ -1209,16 +1087,16 @@ class ArrayOne implements ArrayAccess
      */
     public function columnToIndex($oldColumn): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
         $result = [];
-        foreach ($this->currentArray as $row) {
+        foreach ($this->array as $row) {
             $newIndex = $row[$oldColumn];
             unset($row[$oldColumn]);
             $result[$newIndex] = $row;
         }
-        $this->currentArray = $result;
+        $this->array = $result;
         return $this;
     }
 
@@ -1262,7 +1140,7 @@ class ArrayOne implements ArrayAccess
      */
     public function group($columnToGroup, array $funcAggreg, bool $useGroupIndex = true): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
         $groups = [];
@@ -1280,7 +1158,7 @@ class ArrayOne implements ArrayAccess
             }
             $preFunction[] = [$colName, $colOld, $fun];
         }
-        foreach ($this->currentArray as $row) {
+        foreach ($this->array as $row) {
             if (array_key_exists($row[$columnToGroup], $groups)) {
                 $initial = $groups[$row[$columnToGroup]];
                 $initial['__count']++;
@@ -1348,7 +1226,7 @@ class ArrayOne implements ArrayAccess
             }
             unset($groups[$k]['__count']);
         }
-        $this->currentArray = $useGroupIndex ? $groups : array_values($groups);
+        $this->array = $useGroupIndex ? $groups : array_values($groups);
         return $this;
     }
 
@@ -1364,17 +1242,17 @@ class ArrayOne implements ArrayAccess
      */
     public function sort($column, string $direction = 'asc'): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
         if ($column === null) {
             if ($direction === 'asc') {
-                sort($this->currentArray);
+                sort($this->array);
             } else {
-                rsort($this->currentArray);
+                rsort($this->array);
             }
         } else {
-            usort($this->currentArray, static function($row1, $row2) use ($direction, $column) {
+            usort($this->array, static function($row1, $row2) use ($direction, $column) {
                 if ($row1[$column] === $row2[$column]) {
                     return 0;
                 }
@@ -1398,14 +1276,14 @@ class ArrayOne implements ArrayAccess
      */
     public function removeDuplicate($colName): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
         $exist = [];
-        foreach ($this->currentArray as $numrow => $row) {
+        foreach ($this->array as $numrow => $row) {
             if (isset($row[$colName]) && in_array($row[$colName], $exist, true)) {
                 // duplicated.
-                unset($this->currentArray[$numrow]);
+                unset($this->array[$numrow]);
             } else {
                 $exist[] = $row[$colName] ?? null;
             }
@@ -1427,12 +1305,12 @@ class ArrayOne implements ArrayAccess
      */
     public function removeRow($rowId, bool $renumber = false): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
-        unset($this->currentArray[$rowId]);
+        unset($this->array[$rowId]);
         if ($renumber) {
-            $this->currentArray = array_values($this->currentArray);
+            $this->array = array_values($this->array);
         }
         return $this;
     }
@@ -1452,14 +1330,14 @@ class ArrayOne implements ArrayAccess
      */
     public function removeFirstRow(int $numberOfRows = 1, bool $renumber = false): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
         for ($i = 0; $i < $numberOfRows; $i++) {
-            array_shift($this->currentArray);
+            array_shift($this->array);
         }
         if ($renumber) {
-            $this->currentArray = array_values($this->currentArray);
+            $this->array = array_values($this->array);
         }
         return $this;
     }
@@ -1479,14 +1357,14 @@ class ArrayOne implements ArrayAccess
      */
     public function removeLastRow(int $numberOfRows = 1, bool $renumber = false): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
         for ($i = 0; $i < $numberOfRows; $i++) {
-            array_pop($this->currentArray);
+            array_pop($this->array);
         }
         if ($renumber) {
-            $this->currentArray = array_values($this->currentArray);
+            $this->array = array_values($this->array);
         }
         return $this;
     }
@@ -1691,10 +1569,10 @@ class ArrayOne implements ArrayAccess
      */
     public function validate(array $comparisonTable, bool $extraFieldError = false): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
-        $this->currentArray = $this->validateRec($comparisonTable, $this->currentArray, $extraFieldError);
+        $this->array = $this->validateRec($comparisonTable, $this->array, $extraFieldError);
         return $this;
     }
 
@@ -1810,10 +1688,10 @@ class ArrayOne implements ArrayAccess
      */
     public function mask(array $arrayMask): ArrayOne
     {
-        if ($this->currentArray === null) {
+        if ($this->array === null) {
             return $this;
         }
-        $this->maskRec($arrayMask, $this->currentArray);
+        $this->maskRec($arrayMask, $this->array);
         return $this;
     }
 

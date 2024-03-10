@@ -3,7 +3,7 @@ It is a minimalist library that process arrays in PHP.
 
 This library is focused to work with business data(reading/saving files, database records, API, etc.),
 so it is not similar to Numpy, Pandas, NumPHP or alike because they target difference objectives.
-It is more closely similar to Microsoft PowerQuery.
+It is more closely similar to Microsoft PowerQuery and Linq.
 What it does? Filter, order, renaming column, grouping, validating, amongst many other operations.
 
 
@@ -48,7 +48,6 @@ What it does? Filter, order, renaming column, grouping, validating, amongst many
     * [last](#last)
     * [map](#map)
     * [mask](#mask)
-    * [nav](#nav)
     * [npos](#npos)
     * [reduce](#reduce)
     * [removecol](#removecol)
@@ -62,7 +61,6 @@ What it does? Filter, order, renaming column, grouping, validating, amongst many
     * [validate](#validate)
   * [end operators](#end-operators)
     * [getAll()](#getall)
-    * [getCurrent()](#getcurrent)
     * [isValid()](#isvalid)
   * [other methods](#other-methods)
     * [makeValidateArrayByExample](#makevalidatearraybyexample)
@@ -85,15 +83,13 @@ $invoice=[
         ['idproduct'=>3,'unitPrice'=>300,'quantity'=>5],
     ]
 ];
-$arr=ArrayOne::set($invoice)
-    ->nav('detail')
+$arr=ArrayOne::set($invoice['detail'])
     ->reduce(['unitPrice'=>'sum','quantity'=>'sum'])
-    ->getCurrent(); //['unitPrice'=>800,'quanty'=>12]
+    ->all(); //['unitPrice'=>800,'quanty'=>12]
 // or also
-$arr=(new ArrayOne($invoice))
-    ->nav('detail')
+$arr=(new ArrayOne($invoice['detail']))
     ->reduce(['unitPrice'=>'sum','quantity'=>'sum'])
-    ->getCurrent(); //['unitPrice'=>800,'quanty'=>12]
+    ->all(); //['unitPrice'=>800,'quanty'=>12]
 ```
 
 ## Getting started
@@ -110,7 +106,7 @@ ArrayOne::set($array); // Initial operator: $array is our initial array.
     ->someoperator1()  // Middle operator: here we do one or many operations to transform the array
     ->someoperator2()
     ->someoperator3()
-    ->getCurrent(); // End operator: and we get the end result that usually is an array but it could be even a literal.
+    ->all(); // End operator: and we get the end result that usually is an array but it could be even a literal.
 ```
 
 ## Concepts
@@ -131,7 +127,6 @@ $array=['hello'  // indexed field
 ```
 
 * indexed and named fields works similarly.
-* When a field contains an array, then you can "navigate" inside it using the command nav(). In the case of the field called **fields** is nav("field")
 * Sometimes, some field contains an array of values that behave like a table (see **table** field)
 
 ## initial operator
@@ -218,7 +213,6 @@ They do the transformation and they could be stacked.
 **example:**
 ```php
 ArrayOne::set($array)
-    ->nav('field') // middle operator #1
     ->group('col1',['col2'=>'sum']) // middle operator #2
     ->all();
 ```
@@ -263,7 +257,7 @@ $r = ArrayOne::set($array)->filter([['id'=>'eq;2'],['col','eq;10]], false)->resu
 It returns an array with the key and values of the elements that matches the condition.<br>
 * **parameter** callable|null|array $condition you can use a callable function ($row,$id):bool {}<br/>
                                        or a comparison array ['id'=>'eq;2|lt;3'] "|" adds more comparisons<br>
-                                       or a comparison array [['id=>['eq',2]],['id'=>['lt',3]]]<br>
+                                       or a comparison array [['id=>\['eq',2\]]],['id'=>\['lt',3\]]<br>
 * **parameter** bool                $onlyFirst if true then it only returns the first value
 * **parameter** string              $mode      =['all','key','value'] // (default is all)<br>
                                        <b>all</b> returns the key and the value obtained<br>
@@ -274,7 +268,7 @@ It returns an array with the key and values of the elements that matches the con
 ```php
 ArrayOne::set($array)->find(function($row, $id) {
           return $row['id'] === 2;
-          })->getCurrent(); // [[0,"apple"],[3,"pear"]]
+          })->all(); // [[0,"apple"],[3,"pear"]]
 ```
 
 > It uses the same conditions as filter()
@@ -404,7 +398,13 @@ ArrayOne::set($products)->join($types,'idtype','id')->all()
 It returns the last element of an array.
 * **return value** $this
 ### map
-It calls a function for every element of an array
+It calls a function for every element of an array.
+**Example:**
+```php
+$this->map(function($row) { return strtoupper($row); });
+```
+
+
 * **parameter** callable|null $condition The function to call.
 * **return value** $this
 ### mask
@@ -419,19 +419,7 @@ $this->mask($mask); // $array=['a'=>1,'items'=>[[a1'=>1],[a1'=>1]];
 ```
 * **param** array $arrayMask An associative array with the mask. The mask could contain any value.
 * **return value** ArrayOne
-### nav
-Navigate inside the arrays.   
-If you want to select a subcolumn, then you could indicate it separated by dot: "column.subcolumn". You
-can separate up to 5 levels.
-**Example:**
-```php
-$this->nav('col');
-$this->nav(); // return to root.
-$this->nav('col.subcol.subsubcol'); //  [col=>[subcol=>[subsubcol=>[1,2,3]]]] returns  [1,2,3]
-```
-* **parameter** string|int|null $colName   the name of the field. If null then it returns to the root.   
-  You can add more leves by separating by "."
-* **return value** $this
+
 ### npos
 It returns the n-position of an array.
 * **parameter** $index
@@ -622,15 +610,12 @@ ValidateOne
 
 ## end operators
 ### getAll()
-Returns the whole array transformed. If you want the current navigation then use current()
+Returns the whole array transformed.
 
 **Example:**
 ```php
-$this->set($array)->nav('field')->getAll();
+$this->set($array)->getAll();
 ```
-### getCurrent()
-
-Returns the result indicated by nav(). If you want to return the whole array, then use all()
 
 ### isValid()
 returns true if the validation has no error.
@@ -647,7 +632,7 @@ if ($this->set($array)->valid($arrayComparison)->isValid()) {
 
 **Example:** 
 ```php
-$this->set($array)->nav('field')->getCurrent();
+$this->set($array)->all();
 ```
 * **return value** mixed
 
@@ -676,6 +661,22 @@ $this->makeRequestArrayByExample(['a'=1,'b'=>2]); // ['a'='post','b'=>'post'];
 
 
 ## versions
+* 2.00 2024-03-10
+  * nav() and currentArray() are removed from 2.0. The library was optimized and streamlined, and those functions are redundant.      
+**migration:** 
+```php
+// before:
+$r=ArrayOne::set($array)->nav('field')->...->all();
+// now:
+$r=ArrayOne::set($array['field'])->...->all();
+// before:
+$r=ArrayOne::set($array)->nav('field')->...->all();
+// now:
+$r=$array;
+$r['field']=ArrayOne::set($array['field'])->...->all();
+```
+
+
 * 1.12 2024-03-01
   * Updating dependency to PHP 7.4. The extended support of PHP 7.2 ended 3 years ago.
 * 1.11 2024-03-01
